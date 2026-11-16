@@ -151,6 +151,12 @@ def run_scan(cfg: Config) -> ScanResult:
         leaders[sec] = list(rs_rating[members].sort_values(ascending=False).index[:3])
 
     delivery = delivery_stats(list(bench50.index)) if cfg.use_nse else pd.DataFrame()
+    delivery_note = None
+    if len(delivery) and delivery["BhavDate"].iloc[0] < latest.normalize():
+        delivery_note = (f"NSE has not yet published the bhavcopy for {latest:%d %b %Y}; "
+                         f"latest is {delivery['BhavDate'].iloc[0]:%d %b %Y}, so delivery is N/A in scores")
+        log.warning(delivery_note)
+        delivery = pd.DataFrame()
 
     # ---- technical assessment for everyone ----
     assessed: dict[str, Assessment] = {}
@@ -248,7 +254,7 @@ def run_scan(cfg: Config) -> ScanResult:
     as_of = latest.normalize()
     prev_as_of, removed = _update_history(history_path(cfg.universe), as_of, rows, assessed)
     ilast = max((it.last_bar for it in intra.values()), default=None)
-    notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg)
+    notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note)
     return ScanResult(
         as_of=as_of, generated=datetime.now(), cfg=cfg, n50=n50, n500=n500, breadth=br, breadth_hist=brh,
         regime=regime, sectors=sectors, rows=rows, top=top, portfolio=portfolio, failed=failed, removed=removed,
@@ -285,14 +291,14 @@ def _update_history(path: Path, as_of: pd.Timestamp, rows: list[dict], assessed:
     return (f"{pd.Timestamp(prev_dates[-1]):%Y-%m-%d}" if prev_dates else None), removed
 
 
-def _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg) -> list[tuple[str, str, str]]:
+def _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note=None) -> list[tuple[str, str, str]]:
     bd = delivery["BhavDate"].iloc[0] if len(delivery) else None
     fq = sorted({f.latest_quarter for f in funds.values() if f.latest_quarter})
     return [
         ("Daily, weekly, monthly prices", "Yahoo Finance (auto-adjusted)", f"End-of-day, session of {as_of:%d %b %Y}"),
         ("4-hour and 1-hour bars, VWAP", "Yahoo Finance 60-minute bars",
          f"Delayed; last bar {ilast:%d %b %Y %H:%M} IST" if ilast is not None else ("Disabled" if not cfg.use_intraday else "Unavailable")),
-        ("Delivery volume", "NSE bhavcopy archive", f"End-of-day, {bd:%d %b %Y}" if bd is not None else "Unavailable"),
+        ("Delivery volume", "NSE bhavcopy archive", f"End-of-day, {bd:%d %b %Y}" if bd is not None else (delivery_note or "Unavailable")),
         ("GSM stage, series, price band", "NSE security list archive", "Current file" if len(restrict) else "Unavailable"),
         ("Fundamentals, earnings dates", "Yahoo Finance", f"Latest reported quarter: {', '.join(fq[-2:])}" if fq else ("Disabled" if not cfg.use_fundamentals else "Unavailable")),
         ("Promoter holding", "Yahoo 'insider' holding", "Approximation, single snapshot; trend N/A"),

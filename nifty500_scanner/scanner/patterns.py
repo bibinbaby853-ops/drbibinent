@@ -77,20 +77,33 @@ def _crossed(df: pd.DataFrame, level: float, bars: int = 2) -> bool:
 
 # --------------------------------------------------------------------------- #
 
-def high_breakout(df: pd.DataFrame, n: int) -> Pattern | None:
-    """Close above the prior n-day high on volume (n = 20 or 50)."""
-    if len(df) < n + 10:
+def high_breakout(df: pd.DataFrame, n: int, hold_bars: int = 3) -> Pattern | None:
+    """Close above the prior n-day high on volume, today or in the last few sessions while still holding above it.
+
+    Looking back a few sessions matters: the day after a breakout, the breakout
+    bar's own high becomes the new n-day high, so a stock pausing just above
+    the old level would otherwise lose its breakout status overnight.
+    """
+    if len(df) < n + 10 + hold_bars:
         return None
     r = df.iloc[-1]
-    level = float(df["High"].iloc[-n - 1 : -1].max())
-    if r.Close <= level:
-        return None
-    vol_ok = _vol_ok(r)
-    base_low = float(df["Low"].iloc[-n - 1 : -1].min())
-    q = 5 + (2 if vol_ok else -2) + (1 if r.ClosePos >= 0.7 else 0) + (1 if n >= 50 else 0) + (1 if r.Close >= r.High252 * 0.98 else 0)
-    return Pattern(f"{n}-day high breakout", "confirmed", level, base_low, float(np.clip(q, 0, 10)),
-                   f"closed {(r.Close / level - 1) * 100:.1f}% above the prior {n}-day high of {level:.2f}"
-                   + (f" on {r.RVOL:.1f}x volume" if vol_ok else " but volume did not confirm"))
+    for back in range(hold_bars):
+        i = len(df) - 1 - back
+        level = float(df["High"].iloc[i - n : i].max())
+        bar = df.iloc[i]
+        if bar.Close <= level:
+            continue
+        if back and df["Close"].iloc[i:].min() < level:
+            continue  # it slipped back under the level since, so not holding
+        vol_ok = _vol_ok(bar)
+        base_low = float(df["Low"].iloc[i - n : i].min())
+        q = (5 + (2 if vol_ok else -2) + (1 if bar.ClosePos >= 0.7 else 0) + (1 if n >= 50 else 0)
+             + (1 if r.Close >= r.High252 * 0.98 else 0) - (1 if back else 0))
+        when = "today" if back == 0 else f"{back} session{'s' if back > 1 else ''} ago and is holding above it"
+        return Pattern(f"{n}-day high breakout", "confirmed", level, base_low, float(np.clip(q, 0, 10)),
+                       f"closed above the prior {n}-day high of {level:.2f} {when}"
+                       + (f", breakout volume {bar.RVOL:.1f}x" if vol_ok else ", but breakout volume did not confirm"))
+    return None
 
 
 def consolidation_breakout(df: pd.DataFrame) -> Pattern | None:

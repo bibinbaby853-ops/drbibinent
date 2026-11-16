@@ -16,6 +16,20 @@ CACHE_DIR = Path(__file__).resolve().parent.parent / "cache"
 OHLCV_COLS = ["Open", "High", "Low", "Close", "Volume"]
 
 
+IST = "Asia/Kolkata"
+CLOSE_SETTLED = (15, 45)  # NSE closes 15:30 IST; allow a little time for final bars
+
+
+def _cache_fresh(path: Path) -> bool:
+    """A same-day cache written before today's close is stale once the close has passed."""
+    now = pd.Timestamp.now(tz=IST)
+    written = pd.Timestamp(path.stat().st_mtime, unit="s", tz="UTC").tz_convert(IST)
+    settle = now.normalize() + pd.Timedelta(hours=CLOSE_SETTLED[0], minutes=CLOSE_SETTLED[1])
+    if now.dayofweek < 5 and now >= settle and written < settle:
+        return False
+    return True
+
+
 def _cache_path(tag: str, period: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / f"ohlcv_{tag}_{period}_{date.today():%Y-%m-%d}.pkl"
@@ -88,7 +102,9 @@ def download_ohlcv(
     yf.set_tz_cache_location(str(tz_dir))
 
     cache_file = _cache_path(cache_tag or f"{len(tickers)}syms", period) if use_cache else None
-    if cache_file and cache_file.exists():
+    if cache_file and cache_file.exists() and not _cache_fresh(cache_file):
+        log.info("Ignoring %s: it was written before today's close", cache_file.name)
+    elif cache_file and cache_file.exists():
         with open(cache_file, "rb") as fh:
             cached = pickle.load(fh)
         if set(tickers).issubset(cached):

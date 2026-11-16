@@ -1,32 +1,59 @@
 AsOf,Symbol,Score,Watchlist,Setup
-2026-11-13 00:00:00,NAZARA,83.5,BREAKOUT WATCH,Higher lows into resistance
-2026-11-13 00:00:00,TIPSMUSIC,82.7,READY TO TRADE,Breakout retest
-2026-11-13 00:00:00,KMEW,82.2,BREAKOUT WATCH,Tight consolidation
-2026-11-13 00:00:00,APOLLO,80.5,READY TO TRADE,50-day high breakout
-2026-11-13 00:00:00,INDGN,80.1,READY TO TRADE,Emerging from long consolidation
-2026-11-13 00:00:00,KWIL,77.2,BREAKOUT WATCH,Consolidation breakout
-2026-11-13 00:00:00,SAREGAMA,77.0,BREAKOUT WATCH,Bull flag
-2026-11-13 00:00:00,MSTCLTD,76.7,PULLBACK WATCH,"Extended leader, wait for pullback"
-2026-11-13 00:00:00,SOUTHBANK,76.2,PULLBACK WATCH,"Extended leader, wait for pullback"
-2026-11-13 00:00:00,SHREEJISPG,75.6,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
-2026-11-13 00:00:00,IIFLCAPS,75.5,BREAKOUT WATCH,Consolidation breakout
-2026-11-13 00:00:00,SGMART,75.4,READY TO TRADE,Breakout retest
-2026-11-13 00:00:00,CENTUM,75.0,BREAKOUT WATCH,20-day high breakout
-2026-11-13 00:00:00,SPARC,74.5,BREAKOUT WATCH,Bull flag
-2026-11-13 00:00:00,PGIL,73.7,BREAKOUT WATCH,Bull flag
-2026-11-13 00:00:00,KRBL,72.8,BREAKOUT WATCH,20-day high breakout
-2026-11-13 00:00:00,BANCOINDIA,72.3,BREAKOUT WATCH,Bull flag
-2026-11-13 00:00:00,GPPL,72.2,BREAKOUT WATCH,Emerging from long consolidation
-2026-11-13 00:00:00,EDELWEISS,72.0,BREAKOUT WATCH,Consolidation breakout
-2026-11-13 00:00:00,SHILPAMED,71.9,BREAKOUT WATCH,Tight consolidation
-2026-11-13 00:00:00,MBAPL,71.5,BREAKOUT WATCH,Bull flag
-2026-11-13 00:00:00,QUESS,70.9,BREAKOUT WATCH,Volatility contraction (VCP)
-2026-11-13 00:00:00,JAMNAAUTO,69.8,PULLBACK WATCH,"Trend continuation, wait for pullback"
-2026-11-13 00:00:00,THELEELA,69.7,BREAKOUT WATCH,Breakout retest
-2026-11-13 00:00:00,CEIGALL,69.2,BREAKOUT WATCH,Cup and handle
-2026-11-13 00:00:00,PGHL,67.9,BREAKOUT WATCH,Bull pennant
-2026-11-13 00:00:00,DIACABS,67.5,BREAKOUT WATCH,Bull pennant
-2026-11-13 00:00:00,TANLA,67.3,PULLBACK WATCH,"Extended leader, wait for pullback"
-2026-11-13 00:00:00,FIEMIND,66.1,PULLBACK WATCH,"Extended leader, wait for pullback"
-2026-11-13 00:00:00,ICIL,65.9,PULLBACK WATCH,"Trend continuation, wait for pullback"
-2026-11-13 00:00:00,HAPPYFORGE,65.6,BREAKOUT WATCH,Consolidation breakout
+2026-11-13,NAZARA,83.5,BREAKOUT WATCH,Higher lows into resistance
+2026-11-13,TIPSMUSIC,82.7,READY TO TRADE,Breakout retest
+2026-11-13,KMEW,82.2,BREAKOUT WATCH,Tight consolidation
+2026-11-13,APOLLO,80.5,READY TO TRADE,50-day high breakout
+2026-11-13,INDGN,80.1,READY TO TRADE,Emerging from long consolidation
+2026-11-13,KWIL,77.2,BREAKOUT WATCH,Consolidation breakout
+2026-11-13,SAREGAMA,77.0,BREAKOUT WATCH,Bull flag
+2026-11-13,MSTCLTD,76.7,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-13,SOUTHBANK,76.2,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-13,SHREEJISPG,75.6,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
+2026-11-13,IIFLCAPS,75.5,BREAKOUT WATCH,Consolidation breakout
+2026-11-13,SGMART,75.4,READY TO TRADE,Breakout retest
+2026-11-13,CENTUM,75.0,BREAKOUT WATCH,20-day high breakout
+2026-11-13,SPARC,74.5,BREAKOUT WATCH,Bull flag
+2026-11-13,PGIL,73.7,BREAKOUT WATCH,Bull flag
+2026-11-13,KRBL,72.8,BREAKOUT WATCH,20-day high breakout
+2026-11-13,BANCOINDIA,72.3,BREAKOUT WATCH,Bull flag
+2026-11-13,GPPL,72.2,BREAKOUT WATCH,Emerging from long consolidation
+2026-11-13,EDELWEISS,72.0,BREAKOUT WATCH,Consolidation breakout
+2026-11-13,SHILPAMED,71.9,BREAKOUT WATCH,Tight consolidation
+2026-11-13,MBAPL,71.5,BREAKOUT WATCH,Bull flag
+2026-11-13,QUESS,70.9,BREAKOUT WATCH,Volatility contraction (VCP)
+2026-11-13,JAMNAAUTO,69.8,PULLBACK WATCH,"Trend continuation, wait for pullback"
+2026-11-13,THELEELA,69.7,BREAKOUT WATCH,Breakout retest
+2026-11-13,CEIGALL,69.2,BREAKOUT WATCH,Cup and handle
+2026-11-13,PGHL,67.9,BREAKOUT WATCH,Bull pennant
+2026-11-13,DIACABS,67.5,BREAKOUT WATCH,Bull pennant
+2026-11-13,TANLA,67.3,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-13,FIEMIND,66.1,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-13,ICIL,65.9,PULLBACK WATCH,"Trend continuation, wait for pullback"
+2026-11-13,HAPPYFORGE,65.6,BREAKOUT WATCH,Consolidation breakout
+2026-11-16,TIPSMUSIC,82.6,BREAKOUT WATCH,Higher lows into resistance
+2026-11-16,NAZARA,81.6,BREAKOUT WATCH,Higher lows into resistance
+2026-11-16,SOUTHBANK,80.9,BREAKOUT WATCH,Higher lows into resistance
+2026-11-16,PDSL,79.3,BREAKOUT WATCH,Bull flag
+2026-11-16,SGMART,79.0,READY TO TRADE,Breakout retest
+2026-11-16,SHREEJISPG,78.8,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
+2026-11-16,KMEW,78.7,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
+2026-11-16,MSTCLTD,76.7,PULLBACK WATCH,"High-volume selling bar, wait for it to be absorbed"
+2026-11-16,THELEELA,74.7,BREAKOUT WATCH,Breakout retest
+2026-11-16,KTKBANK,74.2,BREAKOUT WATCH,Breakout retest
+2026-11-16,LUMAXTECH,73.4,BREAKOUT WATCH,Breakout retest
+2026-11-16,SAREGAMA,73.0,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-16,QUESS,72.9,BREAKOUT WATCH,Volatility contraction (VCP)
+2026-11-16,ICIL,72.6,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
+2026-11-16,INDGN,72.1,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
+2026-11-16,BANCOINDIA,71.7,BREAKOUT WATCH,Bull pennant
+2026-11-16,IIFLCAPS,71.6,BREAKOUT WATCH,Emerging from long consolidation
+2026-11-16,AARTIPHARM,71.3,BREAKOUT WATCH,20-day high breakout (needs volume follow-through)
+2026-11-16,TIMEX,70.5,BREAKOUT WATCH,Bull flag
+2026-11-16,KWIL,69.4,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-16,METROPOLIS,68.9,BREAKOUT WATCH,Bull flag
+2026-11-16,APOLLO,68.6,BREAKOUT WATCH,50-day high breakout (needs volume follow-through)
+2026-11-16,SHADOWFAX,68.0,BREAKOUT WATCH,Tight consolidation
+2026-11-16,FIEMIND,67.9,PULLBACK WATCH,"Extended leader, wait for pullback"
+2026-11-16,WESTLIFE,67.7,BREAKOUT WATCH,Bull flag
+2026-11-16,GOKULAGRO,67.1,PULLBACK WATCH,"High-volume selling bar, wait for it to be absorbed"
+2026-11-16,GPPL,65.9,BREAKOUT WATCH,Emerging from long consolidation (needs volume follow-through)

@@ -135,3 +135,14 @@ def test_intraday_vwap_side():
     h = pd.DataFrame({"Open": c, "High": c + 0.5, "Low": c - 0.5, "Close": c, "Volume": 1000.0}, index=idx)
     res = analyse(h)
     assert res is not None and res.above_ema20_1h and res.confirm_4h
+
+
+def test_high_breakout_still_recognised_while_holding_next_day():
+    df = _trend()
+    hi = df["High"].iloc[-52:-2].max()
+    df.loc[df.index[-2], ["Open", "Low", "Close", "High", "Volume"]] = [hi, hi - 0.2, hi + 2, hi + 3, 3_000_000]
+    df.loc[df.index[-1], ["Open", "Low", "Close", "High", "Volume"]] = [hi + 2, hi + 0.5, hi + 1.5, hi + 2.2, 800_000]
+    p = pt.high_breakout(enrich_momentum(df), 50)
+    assert p is not None and "holding" in p.detail
+    df.loc[df.index[-1], ["Low", "Close"]] = [hi - 3, hi - 2]
+    assert pt.high_breakout(enrich_momentum(df), 50) is None
