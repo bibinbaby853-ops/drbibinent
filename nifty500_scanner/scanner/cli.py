@@ -27,7 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Scan Nifty 500 stocks for swing-trading setups (end-of-day data).",
     )
     p.add_argument("--universe", default="nifty500",
-                   help="nifty50 | nifty100 | nifty200 | nifty500 | midcap150 | smallcap250 | path to a CSV/txt of symbols")
+                   help="nifty50 | nifty100 | nifty200 | nifty500 | midcap150 | smallcap250 | microcap250 | path to a CSV/txt of symbols")
     p.add_argument("--symbols", nargs="*", help="Scan only these NSE symbols (e.g. RELIANCE TCS)")
     p.add_argument("--period", default="2y", help="History to download (yfinance period, default 2y)")
     p.add_argument("--benchmark", default="^NSEI", help="Benchmark for relative strength (default ^NSEI = Nifty 50)")

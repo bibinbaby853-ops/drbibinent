@@ -24,6 +24,7 @@ Useful variations:
 
 ```bash
 python run_scan.py --universe nifty200 --top 20       # smaller universe
+python run_scan.py --universe microcap250 --min-turnover-cr 2   # Nifty Microcap 250, lower liquidity floor
 python run_scan.py --symbols RELIANCE TCS HDFCBANK    # just a few names
 python run_scan.py --setups breakout "52w high"       # only those setups
 python run_scan.py --include-shorts                   # also report short setups

@@ -26,6 +26,7 @@ NSE_INDEX_URLS = {
     "nifty500": "https://archives.nseindia.com/content/indices/ind_nifty500list.csv",
     "midcap150": "https://archives.nseindia.com/content/indices/ind_niftymidcap150list.csv",
     "smallcap250": "https://archives.nseindia.com/content/indices/ind_niftysmallcap250list.csv",
+    "microcap250": "https://archives.nseindia.com/content/indices/ind_niftymicrocap250_list.csv",
 }
 
 _HEADERS = {
