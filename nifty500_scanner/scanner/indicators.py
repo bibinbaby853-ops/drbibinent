@@ -110,3 +110,55 @@ def enrich(df: pd.DataFrame) -> pd.DataFrame:
     out["DistSMA50_pct"] = (c / out["SMA50"] - 1.0) * 100.0
     out["Dist52wHigh_pct"] = (c / out["High252"] - 1.0) * 100.0
     return out
+
+
+def supertrend(df: pd.DataFrame, n: int = 10, mult: float = 3.0) -> pd.DataFrame:
+    """Classic Supertrend. ``ST_Dir`` is +1 when bullish, -1 when bearish."""
+    hl2 = (df["High"] + df["Low"]) / 2.0
+    a = atr(df, n)
+    upper = (hl2 + mult * a).to_numpy()
+    lower = (hl2 - mult * a).to_numpy()
+    close = df["Close"].to_numpy()
+    fu, fl = upper.copy(), lower.copy()
+    direction = np.ones(len(df))
+    line = np.full(len(df), np.nan)
+    for i in range(1, len(df)):
+        if np.isnan(upper[i]) or np.isnan(lower[i]):
+            continue
+        fu[i] = upper[i] if (np.isnan(fu[i - 1]) or upper[i] < fu[i - 1] or close[i - 1] > fu[i - 1]) else fu[i - 1]
+        fl[i] = lower[i] if (np.isnan(fl[i - 1]) or lower[i] > fl[i - 1] or close[i - 1] < fl[i - 1]) else fl[i - 1]
+        if direction[i - 1] == -1 and close[i] > fu[i - 1]:
+            direction[i] = 1
+        elif direction[i - 1] == 1 and close[i] < fl[i - 1]:
+            direction[i] = -1
+        else:
+            direction[i] = direction[i - 1]
+        line[i] = fl[i] if direction[i] == 1 else fu[i]
+    return pd.DataFrame({"ST": line, "ST_Dir": direction}, index=df.index)
+
+
+def obv(df: pd.DataFrame) -> pd.Series:
+    sign = np.sign(df["Close"].diff()).fillna(0.0)
+    return (sign * df["Volume"]).cumsum()
+
+
+def accumulation_distribution(df: pd.DataFrame) -> pd.Series:
+    rng = (df["High"] - df["Low"]).replace(0.0, np.nan)
+    mfm = ((df["Close"] - df["Low"]) - (df["High"] - df["Close"])) / rng
+    return (mfm.fillna(0.0) * df["Volume"]).cumsum()
+
+
+def resample_ohlcv(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    """Daily -> weekly ('W-FRI') or monthly ('ME') bars."""
+    agg = {"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}
+    return df[["Open", "High", "Low", "Close", "Volume"]].resample(rule).agg(agg).dropna(subset=["Close"])
+
+
+def enrich_momentum(df: pd.DataFrame) -> pd.DataFrame:
+    """Everything in ``enrich`` plus the extra series the momentum engine uses."""
+    out = enrich(df)
+    out["EMA200"] = ema(out["Close"], 200)
+    out = out.join(supertrend(out))
+    out["OBV"] = obv(out)
+    out["ADL"] = accumulation_distribution(out)
+    return out

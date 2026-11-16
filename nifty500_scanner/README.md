@@ -34,6 +34,61 @@ python run_scan.py --offline                          # use the bundled symbol l
 python run_scan.py --demo                             # synthetic data, no network
 ```
 
+## Daily momentum report (institutional-style)
+
+`momentum_scan.py` is a second, stricter tool built for 3-20 session
+momentum swing trades. Run it after the market close:
+
+```bash
+python momentum_scan.py                                  # Nifty 500, 10 lakh capital, 0.75% risk
+python momentum_scan.py --capital 2500000 --risk-pct 0.5 --max-open-risk 2
+python momentum_scan.py --universe midcap150 --top 5
+```
+
+It writes an HTML report, a Markdown report and a CSV to `output/`, and
+appends scores to `history/momentum_scores.csv` so each run can show score
+changes, new entries and removals against the previous session.
+
+**Pipeline**
+
+1. Universe and hygiene: live NSE constituents; excludes stale or suspended
+   symbols, unreliable data (zero-volume runs, unexplained 40% jumps),
+   turnover under 10 crore, GSM-stage stocks and trade-for-trade (BE/BZ)
+   series. Narrow price bands are flagged.
+2. Market first: Nifty 50 and Nifty 500 trend, breadth (above 20/50/200-day
+   averages, advance/decline, new highs and lows, 10-session breadth trend)
+   and a RISK-ON / NEUTRAL / RISK-OFF regime that sets risk per trade, the
+   open-risk cap and the minimum score for new entries.
+3. Sectors: median relative return of each NSE industry against the median
+   stock, sector breadth, rotation (1-month vs 3-month rank) and RS leaders.
+4. Scoring (100 points): trend 20, relative strength 20, volume 15, breakout
+   quality 15, momentum indicators 10, fundamentals 10, sector 10. Missing
+   inputs are N/A and the score is renormalised over the data that exists;
+   each stock shows its data coverage out of 100.
+5. Patterns: 20/50-day breakouts, consolidation breakouts, VCP,
+   cup-and-handle, flags and pennants, breakout retests, higher lows into
+   resistance and emergence from 6-month bases. Extended stocks are routed
+   to the pullback list instead of being chased.
+6. Enrichment of the top 40: Yahoo fundamentals and earnings dates, NSE
+   delivery %, and 60-minute bars for 4-hour confirmation and 1-hour
+   VWAP timing.
+7. Trade plans: breakout and pullback entries, structure and ATR stops,
+   targets capped by overhead resistance, R:R, holding period, invalidation
+   level and position size. A portfolio plan fills READY trades within the
+   open-risk cap and at most two per sector.
+
+**Watchlists**: READY TO TRADE (score above the regime threshold, R:R at
+least 1:2, no distribution bar, no failed breakout, no results within a
+week), BREAKOUT WATCH and PULLBACK WATCH. Failed breakouts and removed names
+are listed separately.
+
+**Data limits**: daily data is end-of-day, intraday is delayed, and no
+backtest results are included. NSE's live API blocks automated clients, so
+the ASM list, promoter pledging, shareholding trends, corporate
+announcements and bid-ask spreads are reported as N/A. Promoter holding is
+Yahoo's insider percentage, an approximation. The report never places
+orders.
+
 ## Data
 
 * **Prices** come from Yahoo Finance through `yfinance` (NSE symbols get a
@@ -83,7 +138,8 @@ as the stop, a 2R target, and sizes the position so the stop loses
 
 ```
 nifty500_scanner/
-  run_scan.py            entry point
+  run_scan.py            setup scanner entry point
+  momentum_scan.py       daily momentum report entry point
   scanner/
     universe.py          NSE constituent list + bundled fallback
     data.py              yfinance download, daily cache, synthetic data
@@ -91,7 +147,17 @@ nifty500_scanner/
     strategies.py        setup detectors
     scoring.py           filters, composite score, trade plan
     report.py            console / CSV / HTML output
-    cli.py               argument parsing and orchestration
+    cli.py               setup scanner orchestration
+    engine.py            momentum report pipeline
+    market.py            regime, breadth, sector strength and rotation
+    momentum.py          100-point momentum scoring model
+    patterns.py          breakout and chart pattern detectors
+    tradeplan.py         entries, stops, targets, sizing, watchlists
+    fundamentals.py      Yahoo fundamentals and earnings dates
+    nse.py               NSE delivery data and surveillance flags
+    intraday.py          4-hour confirmation and 1-hour timing
+    momentum_report.py   HTML and Markdown rendering
+  history/               daily momentum scores for change tracking
   data/nifty500_fallback.csv
   tests/                 pytest unit tests on synthetic data
 ```

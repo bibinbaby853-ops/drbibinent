@@ -3,3 +3,4 @@ output/*.csv
 output/*.html
 __pycache__/
 *.pyc
+output/*.md
