@@ -22,7 +22,12 @@ from .tradeplan import BREAKOUT, PULLBACK, READY, TradePlan, build_portfolio, pl
 from .universe import get_universe, to_yahoo_ticker
 
 log = logging.getLogger(__name__)
-HISTORY = Path(__file__).resolve().parent.parent / "history" / "momentum_scores.csv"
+HISTORY_DIR = Path(__file__).resolve().parent.parent / "history"
+
+
+def history_path(universe: str) -> Path:
+    """One score history per universe, so runs on different indices never overwrite each other."""
+    return HISTORY_DIR / f"momentum_scores_{Path(universe).stem}.csv"
 
 
 @dataclass
@@ -241,7 +246,7 @@ def run_scan(cfg: Config) -> ScanResult:
 
     # ---- history and day-over-day tracking ----
     as_of = latest.normalize()
-    prev_as_of, removed = _update_history(as_of, rows, assessed)
+    prev_as_of, removed = _update_history(history_path(cfg.universe), as_of, rows, assessed)
     ilast = max((it.last_bar for it in intra.values()), default=None)
     notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg)
     return ScanResult(
@@ -252,9 +257,9 @@ def run_scan(cfg: Config) -> ScanResult:
     )
 
 
-def _update_history(as_of: pd.Timestamp, rows: list[dict], assessed: dict[str, Assessment]):
-    HISTORY.parent.mkdir(parents=True, exist_ok=True)
-    hist = pd.read_csv(HISTORY, parse_dates=["AsOf"]) if HISTORY.exists() else pd.DataFrame(
+def _update_history(path: Path, as_of: pd.Timestamp, rows: list[dict], assessed: dict[str, Assessment]):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    hist = pd.read_csv(path, parse_dates=["AsOf"]) if path.exists() else pd.DataFrame(
         columns=["AsOf", "Symbol", "Score", "Watchlist", "Setup"])
     prev_dates = sorted(d for d in hist["AsOf"].unique() if pd.Timestamp(d) < as_of)
     prev = hist[hist["AsOf"] == prev_dates[-1]].set_index("Symbol") if prev_dates else None
@@ -276,7 +281,7 @@ def _update_history(as_of: pd.Timestamp, rows: list[dict], assessed: dict[str, A
     new = pd.DataFrame([{"AsOf": as_of, "Symbol": r["Symbol"], "Score": r["Score"], "Watchlist": r["Watchlist"],
                          "Setup": r["Setup"]} for r in rows])
     hist = pd.concat([hist[hist["AsOf"] != as_of], new], ignore_index=True)
-    hist.to_csv(HISTORY, index=False, date_format="%Y-%m-%d")
+    hist.to_csv(path, index=False, date_format="%Y-%m-%d")
     return (f"{pd.Timestamp(prev_dates[-1]):%Y-%m-%d}" if prev_dates else None), removed
 
 

@@ -46,7 +46,7 @@ python momentum_scan.py --universe midcap150 --top 5
 ```
 
 It writes an HTML report, a Markdown report and a CSV to `output/`, and
-appends scores to `history/momentum_scores.csv` so each run can show score
+appends scores to `history/momentum_scores_<universe>.csv` so each run can show score
 changes, new entries and removals against the previous session.
 
 **Pipeline**
