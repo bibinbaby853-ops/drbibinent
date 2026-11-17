@@ -311,7 +311,7 @@ def to_html(res: ScanResult) -> str:
 
 def write_reports(res: ScanResult, out_dir: Path) -> tuple[Path, Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    stem = f"momentum_{res.as_of:%Y%m%d}_{res.generated:%H%M}"
+    stem = f"momentum_{Path(res.cfg.universe).stem}_{res.as_of:%Y%m%d}_{res.generated:%H%M}"
     hp, mp, cp = out_dir / f"{stem}.html", out_dir / f"{stem}.md", out_dir / f"{stem}.csv"
     hp.write_text(to_html(res), encoding="utf-8")
     mp.write_text(to_markdown(res), encoding="utf-8")
