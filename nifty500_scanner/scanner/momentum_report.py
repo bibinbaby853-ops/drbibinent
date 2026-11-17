@@ -133,7 +133,7 @@ def to_markdown(res: ScanResult) -> str:
     L.append(f"# Daily Momentum Report: data as of {res.as_of:%d %b %Y} (end of day)")
     L.append(f"Generated {res.generated:%d %b %Y %H:%M}. Universe {res.cfg.universe}: {res.scanned} of {res.universe_size} stocks passed data, liquidity and surveillance filters.")
     L.append("")
-    L.append(f"## Market regime: {rg.label} ({rg.score:.0f}/100)")
+    L.append(f"## Market regime: {rg.label} ({rg.score:.1f}/100)")
     for n in rg.notes:
         L.append(f"- {n}")
     L.append(f"- Risk guidance: {rg.risk_per_trade_pct}% per trade, {rg.max_open_risk_pct}% maximum open risk, new entries need a score of {rg.min_score_ready:.0f}+.")
@@ -243,7 +243,7 @@ def to_html(res: ScanResult) -> str:
              f"{res.scanned} of {res.universe_size} {E(res.cfg.universe)} stocks passed filters</div>")
     n50, n500 = res.n50, res.n500
     h.append("<div class=grid style='margin-top:16px'>")
-    h.append(f"<div class=kv><span>Market regime</span><b class={cls}>{rg.label}</b><span>{rg.score:.0f}/100</span></div>")
+    h.append(f"<div class=kv><span>Market regime</span><b class={cls}>{rg.label}</b><span>{rg.score:.1f}/100</span></div>")
     for it in (n50, n500):
         if it:
             h.append(f"<div class=kv><span>{it.name}</span><b>{it.close:,.0f}</b><span>{it.label} · 1M {it.ret_1m:+.1f}%</span></div>")

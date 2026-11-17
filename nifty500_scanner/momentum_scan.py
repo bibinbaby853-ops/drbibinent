@@ -40,7 +40,7 @@ def main() -> None:
     hp, mp, cp = write_reports(res, Path(a.output_dir))
 
     rg = res.regime
-    print(f"\nData as of {res.as_of:%d %b %Y} (end of day). Market regime: {rg.label} ({rg.score:.0f}/100)")
+    print(f"\nData as of {res.as_of:%d %b %Y} (end of day). Market regime: {rg.label} ({rg.score:.1f}/100)")
     for n in rg.notes:
         print("  -", n)
     print(f"\nTop {len(res.top)} momentum candidates:")
