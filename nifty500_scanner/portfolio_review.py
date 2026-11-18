@@ -56,7 +56,8 @@ def render(res: dict) -> tuple[str, str]:
     for r in rows:
         if "Value" not in r:
             continue
-        md.append(f"### {r['Symbol']}, {r['Name']} ({r['Sector']}): {r['Signal']}")
+        name = f", {r['Name']}" if r["Name"] else ""
+        md.append(f"### {r['Symbol']}{name} ({r['Sector']}): {r['Signal']}")
         if r["Note"]:
             md.append(f"Note: {r['Note']}.")
         md.append(f"Close {r['Close']:.2f} ({r['Chg%']:+.1f}% on the day), cost {r['Avg']:.2f}, P&L {r['PnL']:+,.0f} ({r['PnL%']:+.1f}%). "
@@ -64,7 +65,8 @@ def render(res: dict) -> tuple[str, str]:
         md.append(f"- **Trend:** 20 EMA {r['EMA20']:.2f}, 50 EMA {r['EMA50']:.2f}, 200 EMA {_f(r['EMA200'], '{:.2f}')}; "
                   f"RSI {r['RSI']:.0f}, ADX {r['ADX']:.0f}; weekly trend {({True: 'confirmed', False: 'not confirmed', None: 'N/A'})[r['Weekly']]}.")
         md.append(f"- **Relative strength:** RS rating {_f(r['RSRating'], '{:.0f}')} of 99; 3-month return vs Nifty 500 {_f(r['RS3M'], '{:+.1f}')}%.")
-        dv = f"delivery {_f(r['Deliv'], '{:.0f}')}% vs {_f(r['Deliv20'], '{:.0f}')}% average" if r["Deliv"] is not None else "delivery N/A"
+        has_dv = r["Deliv"] is not None and not (isinstance(r["Deliv"], float) and np.isnan(r["Deliv"]))
+        dv = f"delivery {r['Deliv']:.0f}% vs {_f(r['Deliv20'], '{:.0f}')}% average" if has_dv else "delivery N/A (not in NSE's EQ series)"
         md.append(f"- **Volume:** {r['RVOL']:.1f}x the 20-day average; {dv}.")
         md.append(f"- **Fundamentals:** " + ("; ".join(r["FundEvidence"]) or "N/A") + ".")
         md.append(f"- **Trailing stop:** {r['Stop']:.2f}, {r['StopWhy']}; {r['StopVsCost%']:+.1f}% versus your cost. "
