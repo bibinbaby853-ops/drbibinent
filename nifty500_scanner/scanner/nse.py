@@ -53,10 +53,12 @@ def load_bhavcopy(day: pd.Timestamp) -> pd.DataFrame | None:
     df["SYMBOL"] = df["SYMBOL"].astype(str).str.strip()
     df["SERIES"] = df["SERIES"].astype(str).str.strip()
     df = df[df["SERIES"].isin(["EQ", "BE", "BZ"])]
-    for c in ["TTL_TRD_QNTY", "TURNOVER_LACS", "NO_OF_TRADES", "DELIV_QTY", "DELIV_PER", "CLOSE_PRICE"]:
+    for c in ["TTL_TRD_QNTY", "TURNOVER_LACS", "NO_OF_TRADES", "DELIV_QTY", "DELIV_PER",
+              "OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE", "CLOSE_PRICE"]:
         df[c] = pd.to_numeric(df[c].astype(str).str.strip().replace("-", None), errors="coerce")
     df["DATE"] = day.normalize()
-    return df[["DATE", "SYMBOL", "SERIES", "CLOSE_PRICE", "TTL_TRD_QNTY", "TURNOVER_LACS", "NO_OF_TRADES", "DELIV_QTY", "DELIV_PER"]]
+    return df[["DATE", "SYMBOL", "SERIES", "OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE", "CLOSE_PRICE",
+               "TTL_TRD_QNTY", "TURNOVER_LACS", "NO_OF_TRADES", "DELIV_QTY", "DELIV_PER"]]
 
 
 def delivery_stats(trading_days: list[pd.Timestamp], lookback: int = 21) -> pd.DataFrame:
@@ -108,3 +110,47 @@ def restriction_flags() -> pd.DataFrame:
     out["PriceBand"] = df["Band"].astype(str).str.strip()
     out["GSM"] = df["Remarks"].where(df["Remarks"].str.contains("GSM", case=False), "")
     return out
+
+
+def fill_missing_bars(frames: dict[str, pd.DataFrame], sessions: list[pd.Timestamp], max_gap: int = 3,
+                      max_jump: float = 0.25) -> tuple[dict[str, pd.DataFrame], list[str]]:
+    """Append official NSE bhavcopy bars for recent sessions Yahoo has not published yet.
+
+    ``frames`` is keyed by Yahoo ticker (``SYMBOL.NS``). Only the last
+    ``max_gap`` sessions are filled, and a bar is skipped when its close is
+    more than ``max_jump`` away from the prior close, which would suggest an
+    unadjusted corporate action rather than a real move.
+    """
+    latest = pd.Timestamp(sessions[-1]).normalize()
+    recent = [pd.Timestamp(d).normalize() for d in sessions[-max_gap:]]
+    needy = {t: df for t, df in frames.items() if len(df) and df.index[-1] < latest and df.index[-1] >= recent[0] - pd.Timedelta(days=7)}
+    if not needy:
+        return frames, []
+    bhav = {}
+    for d in recent:
+        if any(df.index[-1] < d for df in needy.values()):
+            b = load_bhavcopy(d)
+            if b is not None:
+                bhav[d] = b[b["SERIES"] == "EQ"].set_index("SYMBOL")
+    filled = []
+    for t, df in needy.items():
+        sym = t[:-3] if t.endswith(".NS") else t
+        add = []
+        prev_close = float(df["Close"].iloc[-1])
+        for d in recent:
+            if d <= df.index[-1] or d not in bhav or sym not in bhav[d].index:
+                continue
+            row = bhav[d].loc[sym]
+            c = float(row["CLOSE_PRICE"])
+            if not prev_close or abs(c / prev_close - 1) > max_jump:
+                add = []
+                break
+            add.append(pd.Series({"Open": float(row["OPEN_PRICE"]), "High": float(row["HIGH_PRICE"]),
+                                  "Low": float(row["LOW_PRICE"]), "Close": c, "Volume": float(row["TTL_TRD_QNTY"])}, name=d))
+            prev_close = c
+        if add:
+            frames[t] = pd.concat([df, pd.DataFrame(add)]).sort_index()
+            filled.append(sym)
+    if filled:
+        log.info("Filled %d stocks' missing recent bars from the NSE bhavcopy", len(filled))
+    return frames, filled

@@ -84,6 +84,11 @@ def run(argv: list[str] | None = None) -> int:
         data = download_ohlcv(tickers, period=args.period, cache_tag=args.universe.replace("/", "_"),
                               use_cache=not args.no_cache)
         bench = download_benchmark(args.benchmark, period=args.period) if args.benchmark else None
+        if bench is not None:
+            from .nse import fill_missing_bars
+            data, filled = fill_missing_bars(data, list(bench.index))
+            if filled:
+                log.info("Filled latest bars for %d stocks from the NSE bhavcopy", len(filled))
         if bench is None:
             log.warning("Benchmark %s unavailable; relative strength will be blank", args.benchmark)
 

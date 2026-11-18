@@ -146,3 +146,19 @@ def test_high_breakout_still_recognised_while_holding_next_day():
     assert p is not None and "holding" in p.detail
     df.loc[df.index[-1], ["Low", "Close"]] = [hi - 3, hi - 2]
     assert pt.high_breakout(enrich_momentum(df), 50) is None
+
+
+def test_fill_missing_bars_from_bhavcopy(monkeypatch):
+    from scanner import nse
+    idx = pd.bdate_range("2026-01-01", periods=50)
+    df = pd.DataFrame({"Open": 100.0, "High": 101.0, "Low": 99.0, "Close": 100.0, "Volume": 1e5}, index=idx[:-1])
+    jumpy = df.copy()
+    bhav = pd.DataFrame({"DATE": [idx[-1]] * 2, "SYMBOL": ["AAA", "BBB"], "SERIES": ["EQ", "EQ"],
+                         "OPEN_PRICE": [100.5, 100.0], "HIGH_PRICE": [103.0, 150.0], "LOW_PRICE": [100.0, 99.0],
+                         "CLOSE_PRICE": [102.0, 150.0], "TTL_TRD_QNTY": [2e5, 1e5], "TURNOVER_LACS": [1, 1],
+                         "NO_OF_TRADES": [1, 1], "DELIV_QTY": [1, 1], "DELIV_PER": [50, 50]})
+    monkeypatch.setattr(nse, "load_bhavcopy", lambda d: bhav if d == idx[-1] else None)
+    frames, filled = nse.fill_missing_bars({"AAA.NS": df, "BBB.NS": jumpy}, list(idx))
+    assert filled == ["AAA"]
+    assert frames["AAA.NS"].index[-1] == idx[-1] and frames["AAA.NS"]["Close"].iloc[-1] == 102.0
+    assert frames["BBB.NS"].index[-1] == idx[-2]  # 50% jump rejected as a likely corporate action

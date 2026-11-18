@@ -16,7 +16,7 @@ from .indicators import enrich_momentum
 from .intraday import Intraday, fetch_intraday
 from .market import IndexTrend, Regime, breadth, breadth_history, index_trend, market_regime, sector_strength
 from .momentum import Assessment, StockContext, assess_technical, classify, rs_composite
-from .nse import delivery_stats, restriction_flags
+from .nse import delivery_stats, fill_missing_bars, restriction_flags
 from .patterns import failed_breakout
 from .tradeplan import BREAKOUT, PULLBACK, READY, TradePlan, build_portfolio, plan_trade
 from .universe import get_universe, to_yahoo_ticker
@@ -98,6 +98,9 @@ def run_scan(cfg: Config) -> ScanResult:
     if bench50 is None:
         raise RuntimeError("Nifty 50 benchmark data unavailable; cannot establish the latest session.")
     latest = bench50.index[-1]
+    filled: list[str] = []
+    if cfg.use_nse:
+        raw, filled = fill_missing_bars(raw, list(bench50.index))
 
     restrict = restriction_flags() if cfg.use_nse else pd.DataFrame()
     excluded: dict[str, list[str]] = {}
@@ -254,7 +257,7 @@ def run_scan(cfg: Config) -> ScanResult:
     as_of = latest.normalize()
     prev_as_of, removed = _update_history(history_path(cfg.universe), as_of, rows, assessed)
     ilast = max((it.last_bar for it in intra.values()), default=None)
-    notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note)
+    notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note, filled)
     return ScanResult(
         as_of=as_of, generated=datetime.now(), cfg=cfg, n50=n50, n500=n500, breadth=br, breadth_hist=brh,
         regime=regime, sectors=sectors, rows=rows, top=top, portfolio=portfolio, failed=failed, removed=removed,
@@ -291,11 +294,14 @@ def _update_history(path: Path, as_of: pd.Timestamp, rows: list[dict], assessed:
     return (f"{pd.Timestamp(prev_dates[-1]):%Y-%m-%d}" if prev_dates else None), removed
 
 
-def _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note=None) -> list[tuple[str, str, str]]:
+def _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note=None, filled=()) -> list[tuple[str, str, str]]:
     bd = delivery["BhavDate"].iloc[0] if len(delivery) else None
     fq = sorted({f.latest_quarter for f in funds.values() if f.latest_quarter})
     return [
         ("Daily, weekly, monthly prices", "Yahoo Finance (auto-adjusted)", f"End-of-day, session of {as_of:%d %b %Y}"),
+        *([("Missing latest bars", "NSE bhavcopy (official, unadjusted)",
+            f"{len(filled)} stocks Yahoo had not yet updated were filled from NSE: {', '.join(sorted(filled)[:15])}{' …' if len(filled) > 15 else ''}")]
+          if filled else []),
         ("4-hour and 1-hour bars, VWAP", "Yahoo Finance 60-minute bars",
          f"Delayed; last bar {ilast:%d %b %Y %H:%M} IST" if ilast is not None else ("Disabled" if not cfg.use_intraday else "Unavailable")),
         ("Delivery volume", "NSE bhavcopy archive", f"End-of-day, {bd:%d %b %Y}" if bd is not None else (delivery_note or "Unavailable")),
