@@ -84,6 +84,10 @@ def run(argv: list[str] | None = None) -> int:
         data = download_ohlcv(tickers, period=args.period, cache_tag=args.universe.replace("/", "_"),
                               use_cache=not args.no_cache)
         bench = download_benchmark(args.benchmark, period=args.period) if args.benchmark else None
+        from .data import drop_incomplete_bars
+        data, _ = drop_incomplete_bars(data)
+        if bench is not None:
+            bench = drop_incomplete_bars({"b": bench})[0]["b"]
         if bench is not None:
             from .nse import fill_missing_bars
             data, filled = fill_missing_bars(data, list(bench.index))

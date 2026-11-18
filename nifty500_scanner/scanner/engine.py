@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .data import download_benchmark, download_ohlcv
+from .data import download_benchmark, download_ohlcv, drop_incomplete_bars
 from .fundamentals import Fundamentals, fetch_fundamentals, score_fundamentals
 from .indicators import enrich_momentum
 from .intraday import Intraday, fetch_intraday
@@ -97,6 +97,9 @@ def run_scan(cfg: Config) -> ScanResult:
     bench500 = download_benchmark("^CRSLDX", period="2y")
     if bench50 is None:
         raise RuntimeError("Nifty 50 benchmark data unavailable; cannot establish the latest session.")
+    raw, intraday_session = drop_incomplete_bars(raw)
+    benches, _ = drop_incomplete_bars({"n50": bench50, "n500": bench500})
+    bench50, bench500 = benches["n50"], benches["n500"]
     latest = bench50.index[-1]
     filled: list[str] = []
     if cfg.use_nse:
@@ -257,7 +260,7 @@ def run_scan(cfg: Config) -> ScanResult:
     as_of = latest.normalize()
     prev_as_of, removed = _update_history(history_path(cfg.universe), as_of, rows, assessed)
     ilast = max((it.last_bar for it in intra.values()), default=None)
-    notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note, filled)
+    notes = _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note, filled, intraday_session)
     return ScanResult(
         as_of=as_of, generated=datetime.now(), cfg=cfg, n50=n50, n500=n500, breadth=br, breadth_hist=brh,
         regime=regime, sectors=sectors, rows=rows, top=top, portfolio=portfolio, failed=failed, removed=removed,
@@ -294,11 +297,12 @@ def _update_history(path: Path, as_of: pd.Timestamp, rows: list[dict], assessed:
     return (f"{pd.Timestamp(prev_dates[-1]):%Y-%m-%d}" if prev_dates else None), removed
 
 
-def _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note=None, filled=()) -> list[tuple[str, str, str]]:
+def _data_notes(as_of, delivery, restrict, funds, intra, ilast, cfg, delivery_note=None, filled=(), in_session=False) -> list[tuple[str, str, str]]:
     bd = delivery["BhavDate"].iloc[0] if len(delivery) else None
     fq = sorted({f.latest_quarter for f in funds.values() if f.latest_quarter})
     return [
-        ("Daily, weekly, monthly prices", "Yahoo Finance (auto-adjusted)", f"End-of-day, session of {as_of:%d %b %Y}"),
+        ("Daily, weekly, monthly prices", "Yahoo Finance (auto-adjusted)", f"End-of-day, session of {as_of:%d %b %Y}"
+         + (". Run while the market was open: today's incomplete bar was excluded" if in_session else "")),
         *([("Missing latest bars", "NSE bhavcopy (official, unadjusted)",
             f"{len(filled)} stocks Yahoo had not yet updated were filled from NSE: {', '.join(sorted(filled)[:15])}{' …' if len(filled) > 15 else ''}")]
           if filled else []),

@@ -170,3 +170,30 @@ def synthetic_ohlcv(
     low = np.minimum(open_, close) * (1 - np.abs(rng.normal(0, vol / 2, n_days)))
     volume = rng.lognormal(13, 0.5, n_days).round()
     return pd.DataFrame({"Open": open_, "High": high, "Low": low, "Close": close, "Volume": volume}, index=idx)
+
+
+def session_in_progress(now: pd.Timestamp | None = None) -> pd.Timestamp | None:
+    """Today's date (IST) if an NSE session is open or not yet settled, else None."""
+    now = now if now is not None else pd.Timestamp.now(tz=IST)
+    if now.dayofweek >= 5:
+        return None
+    start = now.normalize() + pd.Timedelta(hours=9)
+    settle = now.normalize() + pd.Timedelta(hours=CLOSE_SETTLED[0], minutes=CLOSE_SETTLED[1])
+    return now.normalize().tz_localize(None) if start <= now < settle else None
+
+
+def drop_incomplete_bars(frames: dict[str, pd.DataFrame], now: pd.Timestamp | None = None) -> tuple[dict[str, pd.DataFrame], bool]:
+    """Remove today's partial daily bar while the market is open, so indicators use completed sessions only."""
+    today = session_in_progress(now)
+    if today is None:
+        return frames, False
+    dropped = False
+    out = {}
+    for k, df in frames.items():
+        if df is not None and len(df) and df.index[-1] >= today:
+            df = df[df.index < today]
+            dropped = True
+        out[k] = df
+    if dropped:
+        log.info("Market session in progress: dropped today's incomplete daily bars")
+    return out, dropped

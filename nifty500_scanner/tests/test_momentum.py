@@ -162,3 +162,15 @@ def test_fill_missing_bars_from_bhavcopy(monkeypatch):
     assert filled == ["AAA"]
     assert frames["AAA.NS"].index[-1] == idx[-1] and frames["AAA.NS"]["Close"].iloc[-1] == 102.0
     assert frames["BBB.NS"].index[-1] == idx[-2]  # 50% jump rejected as a likely corporate action
+
+
+def test_incomplete_session_bar_is_dropped_only_during_market_hours():
+    from scanner.data import drop_incomplete_bars
+    idx = pd.DatetimeIndex(["2026-11-16", "2026-11-17", "2026-11-18"])
+    df = pd.DataFrame({"Close": [1.0, 2.0, 3.0]}, index=idx)
+    open_ = pd.Timestamp("2026-11-18 10:30", tz="Asia/Kolkata")
+    after = pd.Timestamp("2026-11-18 16:30", tz="Asia/Kolkata")
+    out, dropped = drop_incomplete_bars({"X": df}, now=open_)
+    assert dropped and out["X"].index[-1] == pd.Timestamp("2026-11-17")
+    out, dropped = drop_incomplete_bars({"X": df}, now=after)
+    assert not dropped and out["X"].index[-1] == pd.Timestamp("2026-11-18")
