@@ -7,7 +7,8 @@ and a stage:
 
 * ``confirmed``  - price closed through the pivot in the last couple of sessions
 * ``pre-breakout`` - structure is in place, price is just below the pivot
-* ``retest``     - a recent breakout pulled back to the pivot and is holding
+* ``retest``     - a recent breakout pulled back to the pivot and is holding with a bullish bar
+* ``retest-pending`` - the same structure, without the confirming bullish bar yet
 
 Chart-pattern recognition is heuristic. Treat a detection as "worth opening
 the chart", not as proof of the pattern.
@@ -264,10 +265,14 @@ def breakout_retest(df: pd.DataFrame) -> Pattern | None:
         touched = since["Low"].min() <= level * 1.025 or since["Low"].min() <= level + 0.5 * r.ATR14
         holding = r.Close >= level and since["Close"].min() >= level * 0.98
         bullish = r.Close > r.Open or r.Close > p.High
-        if touched and holding and bullish:
+        if touched and holding:
             q = 7 + (1 if since["Volume"].mean() < bar.Volume else 0) + (1 if r.Close > p.High else 0) + (1 if _vol_ok(r, 1.2) else 0)
-            return Pattern("Breakout retest", "retest", level, float(since["Low"].min()), float(np.clip(q, 0, 10)),
-                           f"broke {level:.2f} {back} sessions ago, retested it and is holding with a bullish bar")
+            if not bullish:
+                q -= 2  # structure intact, but no confirmation bar yet
+            return Pattern("Breakout retest", "retest" if bullish else "retest-pending", level, float(since["Low"].min()),
+                           float(np.clip(q, 0, 10)),
+                           f"broke {level:.2f} {back} sessions ago, retested it and is holding"
+                           + (" with a bullish bar" if bullish else "; still waiting for a bullish confirmation bar"))
     return None
 
 

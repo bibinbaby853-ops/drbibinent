@@ -238,7 +238,7 @@ def assess_technical(ctx: StockContext) -> Assessment:
     if best is not None:
         if extended:
             early = 0.0
-        elif best.stage in ("pre-breakout", "retest"):
+        elif best.stage in ("pre-breakout", "retest", "retest-pending"):
             early = 1.0
         else:
             early = max(0.0, 1 - max(ext_pivot, 0) / 5)

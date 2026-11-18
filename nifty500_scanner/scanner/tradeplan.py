@@ -63,6 +63,8 @@ def plan_trade(a: Assessment, df: pd.DataFrame, capital: float, risk_pct: float,
         wl, setup = PULLBACK, "Extended leader, wait for pullback"
     elif best and best.stage == "retest":
         wl, setup = READY, best.name
+    elif best and best.stage == "retest-pending":
+        wl, setup = PULLBACK, f"{best.name}, awaiting a bullish confirmation bar"
     elif best and best.stage == "confirmed":
         vol_ok = not np.isnan(r.RVOL) and r.RVOL >= 1.5
         wl, setup = (READY, best.name) if vol_ok else (BREAKOUT, f"{best.name} (needs volume follow-through)")
@@ -79,7 +81,13 @@ def plan_trade(a: Assessment, df: pd.DataFrame, capital: float, risk_pct: float,
     pull_level = max(ema20, pivot) if (best and best.stage in ("confirmed", "retest") and pivot < close) else ema20
     pullback_entry = pull_level + 0.2 * atr
 
-    if wl == READY:
+    pending = bool(best and best.stage == "retest-pending" and wl == PULLBACK)
+    if pending:
+        entry = float(r.High) + 0.1 * atr
+        lo, hi = entry, entry + 0.3 * atr
+        trigger = (f"Retest of {pivot:.2f} is holding but today's bar was not bullish. Buy only after a daily close above "
+                   f"today's high of {float(r.High):.2f}; ideal fill {lo:.2f}-{hi:.2f}.")
+    elif wl == READY:
         entry = close
         lo, hi = (max(pivot, close - 0.5 * atr) if best and best.stage != "pre-breakout" else close - 0.5 * atr), close + 0.25 * atr
         trigger = (f"Buy near {close:.2f} on the next session if it holds above {lo:.2f}. "
@@ -98,7 +106,7 @@ def plan_trade(a: Assessment, df: pd.DataFrame, capital: float, risk_pct: float,
     # ---- stops ----
     swing_lows = swing_points(df["Low"].iloc[-30:], 2, "low")
     recent_swing = float(df["Low"].iloc[-30:].iloc[swing_lows[-1]]) if swing_lows else float(df["Low"].iloc[-10:].min())
-    if wl == PULLBACK:
+    if wl == PULLBACK and not pending:
         structure = min(recent_swing, float(r.EMA50)) - 0.2 * atr if entry > r.EMA50 else recent_swing - 0.2 * atr
         stop_logic = "below the most recent swing low / 50 EMA, the level that would break the uptrend"
     elif best is not None:
@@ -138,7 +146,9 @@ def plan_trade(a: Assessment, df: pd.DataFrame, capital: float, risk_pct: float,
     sessions = (t1 - entry) / (0.45 * atr) if atr else 10
     lo_s, hi_s = int(np.clip(round(sessions * 0.7), 3, 20)), int(np.clip(round(sessions * 1.4), 3, 20))
     holding = f"{lo_s}-{hi_s} sessions" if hi_s > lo_s else f"about {lo_s} sessions"
-    if wl == PULLBACK:
+    if pending:
+        invalidation = f"Daily close below the retest level {pivot:.2f} or below {best.base_low:.2f}"
+    elif wl == PULLBACK:
         invalidation = f"Daily close below {float(r.EMA50):.2f} (50 EMA) or below {recent_swing:.2f}"
     elif best is not None:
         invalidation = f"Daily close back below {pivot:.2f} (failed breakout) or below {best.base_low:.2f}"

@@ -174,3 +174,21 @@ def test_incomplete_session_bar_is_dropped_only_during_market_hours():
     assert dropped and out["X"].index[-1] == pd.Timestamp("2026-11-17")
     out, dropped = drop_incomplete_bars({"X": df}, now=after)
     assert not dropped and out["X"].index[-1] == pd.Timestamp("2026-11-18")
+
+
+def test_retest_without_bullish_bar_is_pending_not_ready():
+    df = _trend(step=0.02, noise=0.05)
+    n = len(df)
+    level = float(df["High"].iloc[-60:-8].max())
+    i = df.index[n - 8]
+    df.loc[i, ["Open", "Close", "High", "Low", "Volume"]] = [level, level + 2, level + 2.3, level - 0.2, 3_000_000]
+    for k in range(7, 1, -1):
+        j = df.index[n - k]
+        df.loc[j, ["Open", "High", "Low", "Close"]] = [level + 1.2, level + 1.8, level + 0.3, level + 1.0]
+    df.loc[df.index[-1], ["Open", "High", "Low", "Close"]] = [level + 1.4, level + 1.6, level + 0.4, level + 0.9]
+    e = enrich_momentum(df)
+    p = pt.breakout_retest(e)
+    assert p is not None and p.stage == "retest-pending"
+    a = assess_technical(StockContext("T", e, None, None, 80.0, "IT", None, None))
+    plan = plan_trade(a, e, 1_000_000, 0.75)
+    assert plan.watchlist != READY and plan.entry > float(e["High"].iloc[-1])
