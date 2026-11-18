@@ -107,9 +107,14 @@ def rs_line_new_high(df: pd.DataFrame, bench: pd.DataFrame | None, n: int = 50) 
 
 
 def rs_composite(df: pd.DataFrame) -> float:
-    """IBD-style weighted return used to rank RS across the universe."""
+    """Weighted return used to rank relative strength across the universe.
+
+    Tilted toward the last three months to suit a 3-20 session swing horizon:
+    a stock that ran a year ago but has lagged for a quarter should not rank
+    near the top.
+    """
     c = df["Close"]
-    parts = [(_ret(c, 63), 0.4), (_ret(c, 126), 0.2), (_ret(c, 189), 0.2), (_ret(c, 252), 0.2)]
+    parts = [(_ret(c, 21), 0.25), (_ret(c, 63), 0.40), (_ret(c, 126), 0.20), (_ret(c, 252), 0.15)]
     parts = [(v, w) for v, w in parts if not np.isnan(v)]
     if not parts:
         return np.nan
