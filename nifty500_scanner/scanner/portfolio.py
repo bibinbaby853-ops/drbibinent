@@ -178,6 +178,8 @@ def review(path: str | Path, risk_pct: float = 0.75, max_open_risk_pct: float = 
             "EMA20": float(r.EMA20), "EMA50": float(r.EMA50), "EMA200": float(r.EMA200), "RSI": float(r.RSI14),
             "ADX": float(r.ADX), "RVOL": float(r.RVOL), "RSRating": rs_rating, "RS3M": a.rel500.get("3M") if a.rel500 else None,
             "Weekly": a.weekly_ok, "Setup": plan.setup, "AddList": plan.watchlist, "AddTrigger": plan.trigger,
+            "AddEntry": plan.entry, "AddLow": plan.entry_low, "AddHigh": plan.entry_high, "AddStop": plan.stop,
+            "AddT1": plan.target1, "AddT2": plan.target2, "AddRR": plan.rr1, "Extended": a.extended,
             "Pattern": a.patterns[0].detail if a.patterns else "", "Deliv": None if d is None else d.get("DelivPct"),
             "Deliv20": None if d is None else d.get("DelivPct20"), "Fund": fu, "FundEvidence": fcat.evidence,
         })

@@ -28,6 +28,23 @@ def _f(x, fmt="{:.1f}"):
     return "N/A" if x is None or (isinstance(x, float) and np.isnan(x)) else fmt.format(x)
 
 
+def add_verdict(r: dict) -> str:
+    """Pyramiding rules: add only to winners, in strong trends, on a fresh confirmed setup, never when extended."""
+    if r["PnL%"] <= 0:
+        return "Do not add: the position is not in profit, and adding would be averaging down."
+    if r["Signal"] in ("EXIT SIGNAL", "WEAK: REVIEW"):
+        return "Do not add: the trend is weak."
+    if r.get("Extended"):
+        return "Do not add yet: the stock is extended; wait for a pullback."
+    if r.get("Weight%", 0) >= 20:
+        return f"Do not add: it is already {r['Weight%']:.0f}% of the account, so adding would deepen concentration."
+    if r["Score"] < 75:
+        return f"Add only if the trigger fires: the score of {r['Score']:.0f} is below 75."
+    if r["AddList"] == "READY TO TRADE":
+        return "Add candidate now, if risk capacity allows."
+    return "Add candidate once the trigger fires."
+
+
 def render(res: dict) -> tuple[str, str]:
     rows = sorted(res["rows"], key=lambda r: (ORDER.get(r["Signal"], 9), -r.get("Value", 0)))
     eq, rg = res["equity"], res["regime"]
@@ -72,6 +89,9 @@ def render(res: dict) -> tuple[str, str]:
         md.append(f"- **Trailing stop:** {r['Stop']:.2f}, {r['StopWhy']}; {r['StopVsCost%']:+.1f}% versus your cost. "
                   f"Risk to stop {r['RiskToStop']:,.0f} ({r['Risk%Acct']:.1f}% of the account).")
         md.append(f"- **Setup now:** {r['Setup']}" + (f" ({r['Pattern']})" if r["Pattern"] else "") + f". Adding: {r['AddTrigger']}")
+        md.append(f"- **Add plan:** entry {r['AddLow']:.2f}-{r['AddHigh']:.2f}, stop {r['AddStop']:.2f}, "
+                  f"target 1 {r['AddT1']:.2f}, target 2 {r['AddT2']:.2f}, reward-to-risk 1:{r['AddRR']:.1f}. "
+                  + add_verdict(r))
         if r["Reasons"]:
             md.append("- **Concerns:** " + " ".join(x if x.endswith(".") else x + "." for x in r["Reasons"]))
         if r["Events"]:
