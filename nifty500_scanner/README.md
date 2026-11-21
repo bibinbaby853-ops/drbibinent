@@ -89,6 +89,35 @@ announcements and bid-ask spreads are reported as N/A. Promoter holding is
 Yahoo's insider percentage, an approximation. The report never places
 orders.
 
+## Pattern backtest
+
+`backtest.py` replays the chart-pattern detectors day by day over the last
+five years and trades every signal with the same plan the daily report prints:
+
+```bash
+python backtest.py                         # Nifty 500, about 10-20 minutes on 4 cores
+python backtest.py --universe nifty100     # faster
+python backtest.py --start 2022-01-01 --max-hold 15 --cost-pct 0.4
+```
+
+* No look-ahead: each day only sees data up to that day's close.
+* Entries: READY setups buy the next open if it is inside the entry range;
+  breakout-watch setups wait up to 5 sessions for a close above the pivot on
+  1.5x volume; pullback-watch setups rest a limit order for 10 sessions.
+* Exits: the plan's stop, target 1, or after 20 sessions. If a bar touches
+  both the stop and the target, the stop is assumed first. Costs of 0.3%
+  round trip are deducted.
+* Two baselines (random days, and random uptrend days) use the same stop and
+  target distances, so each pattern's hit rate can be judged against chance.
+
+It writes `output/backtest_<universe>_<time>.html/.md/_trades.csv` and
+`history/pattern_stats_<universe>.json`. The daily momentum report reads that
+file and shows each setup's five-year hit rate and average R.
+
+Limits: today's index members only, so delisted and demoted stocks are
+missing and results look better than reality; only the pattern logic is
+tested, not the full 100-point score; past results are not forecasts.
+
 ## Data
 
 * **Prices** come from Yahoo Finance through `yfinance` (NSE symbols get a
@@ -140,6 +169,8 @@ as the stop, a 2R target, and sizes the position so the stop loses
 nifty500_scanner/
   run_scan.py            setup scanner entry point
   momentum_scan.py       daily momentum report entry point
+  portfolio_review.py    read-only review of broker holdings
+  backtest.py            five-year pattern backtest
   scanner/
     universe.py          NSE constituent list + bundled fallback
     data.py              yfinance download, daily cache, synthetic data
@@ -157,6 +188,8 @@ nifty500_scanner/
     nse.py               NSE delivery data and surveillance flags
     intraday.py          4-hour confirmation and 1-hour timing
     momentum_report.py   HTML and Markdown rendering
+    portfolio.py         holdings review, trailing stops, add rules
+    backtest.py          walk-forward pattern backtest
   history/               daily momentum scores for change tracking
   data/nifty500_fallback.csv
   tests/                 pytest unit tests on synthetic data

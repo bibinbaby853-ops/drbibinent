@@ -21,6 +21,41 @@ def _f(x, fmt="{:.2f}", na="N/A") -> str:
     return fmt.format(x)
 
 
+_HIST_CACHE: dict[str, dict | None] = {}
+
+
+def pattern_history(universe: str) -> dict | None:
+    """Backtest statistics written by backtest.py, for this universe or else the Nifty 500 run."""
+    import json
+
+    key = Path(universe).stem
+    if key not in _HIST_CACHE:
+        base = Path(__file__).resolve().parent.parent / "history"
+        found = None
+        for name in (key, "nifty500"):
+            f = base / f"pattern_stats_{name}.json"
+            if f.exists():
+                found = json.loads(f.read_text())
+                break
+        _HIST_CACHE[key] = found
+    return _HIST_CACHE[key]
+
+
+def history_note(r: dict, universe: str, short: bool = False) -> str:
+    h = pattern_history(universe)
+    if not h or not r["Patterns"]:
+        return "N/A" if short else ""
+    st = h["patterns"].get(r["Patterns"][0].name)
+    if not st:
+        return "N/A" if short else ""
+    if short:
+        return f"{st['win_pct']:.0f}% ({st['avg_r']:+.2f}R, n={st['trades']})"
+    base = h.get("baseline_win_pct")
+    return (f"Backtest ({h['universe']}, {h['first_entry'][:4]}-{h['last_entry'][:4]}): this pattern reached target 1 in "
+            f"{st['win_pct']:.0f}% of {st['trades']} trades, average {st['avg_r']:+.2f}R"
+            + (f", versus {base:.0f}% for random entries" if base is not None else "") + ".")
+
+
 def _cap(s: str) -> str:
     return s[:1].upper() + s[1:] if s else s
 
@@ -33,7 +68,7 @@ def _pct(x) -> str:
 # Per-stock narrative (the nine points)
 # --------------------------------------------------------------------------- #
 
-def stock_sections(r: dict) -> list[tuple[str, str]]:
+def stock_sections(r: dict, universe: str = "nifty500") -> list[tuple[str, str]]:
     cats, d = r["CatObjs"], r["Daily"]
     rs, rs5 = r["RS"], r["RS500"]
     out = []
@@ -51,7 +86,8 @@ def stock_sections(r: dict) -> list[tuple[str, str]]:
     tech.append(f"RSI {d.RSI14:.0f}, ADX {d.ADX:.0f}, MACD histogram {d.Hist:+.2f}, Supertrend {'bullish' if d.ST_Dir == 1 else 'bearish'}")
     tech.append("weekly trend " + ({True: "confirmed", False: "not confirmed", None: "N/A"}[r["Weekly"]])
                 + ", monthly trend " + ({True: "confirmed", False: "not confirmed", None: "N/A"}[r["Monthly"]]))
-    out.append(("Key technical evidence", _cap("; ".join(tech))))
+    hist = history_note(r, universe)
+    out.append(("Key technical evidence", _cap("; ".join(tech)) + (f". {hist}" if hist else "")))
 
     rel = (f"vs Nifty 50: 1W {_pct(rs.get('1W'))}, 1M {_pct(rs.get('1M'))}, 3M {_pct(rs.get('3M'))}. "
            f"vs Nifty 500: 1W {_pct(rs5.get('1W'))}, 1M {_pct(rs5.get('1M'))}, 3M {_pct(rs5.get('3M'))}. "
@@ -145,10 +181,10 @@ def to_markdown(res: ScanResult) -> str:
         L.append(f"| {int(s['Rank'])} | {sec} | {s['RS1M']:+.1f}% | {s['RS3M']:+.1f}% | {s['Above50DMA%']:.0f}% | {s['Rotation']} | {', '.join(res.sector_leaders.get(sec, []))} |")
     L.append("")
     L.append("## Top momentum candidates")
-    L.append("| Rank | Stock | CMP | Score | Setup | Entry | Stop Loss | Target 1 | Target 2 | R:R | List |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| Rank | Stock | CMP | Score | Setup | Entry | Stop Loss | Target 1 | Target 2 | R:R | Pattern hit rate (5y) | List |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for i, r in enumerate(res.top, 1):
-        L.append(f"| {i} | {r['Symbol']} | {r['CMP']:.2f} | {r['Score']:.0f} | {r['Setup']} | {r['EntryLow']:.2f}-{r['EntryHigh']:.2f} | {r['Stop']:.2f} | {r['T1']:.2f} | {r['T2']:.2f} | 1:{r['R:R']:.1f} | {r['Watchlist'].title()} |")
+        L.append(f"| {i} | {r['Symbol']} | {r['CMP']:.2f} | {r['Score']:.0f} | {r['Setup']} | {r['EntryLow']:.2f}-{r['EntryHigh']:.2f} | {r['Stop']:.2f} | {r['T1']:.2f} | {r['T2']:.2f} | 1:{r['R:R']:.1f} | {history_note(r, res.cfg.universe, True)} | {r['Watchlist'].title()} |")
     L.append("")
     for i, r in enumerate(res.top, 1):
         L.append(f"### {i}. {r['Symbol']}, {r['Name']} ({r['Sector']})")
@@ -156,7 +192,7 @@ def to_markdown(res: ScanResult) -> str:
         cs = r["Cats"]
         L.append("Score breakdown: " + ", ".join(f"{k} {_f(v, '{:.1f}')}/{WEIGHTS[k]}" for k, v in cs.items()))
         L.append(f"Fundamentals: {fundamentals_line(r)}.")
-        for n, (title, text) in enumerate(stock_sections(r), 1):
+        for n, (title, text) in enumerate(stock_sections(r, res.cfg.universe), 1):
             L.append(f"{n}. **{title}.** {text}")
         L.append("")
     for wl in (READY, BREAKOUT, PULLBACK):
@@ -259,12 +295,13 @@ def to_html(res: ScanResult) -> str:
                       f"{s['Above50DMA%']:.0f}%", E(s["Rotation"]), E(", ".join(res.sector_leaders.get(sec, [])))], {2, 3, 4, 5, 6}))
     h.append("</table></div>")
 
-    h.append("<h2>Top momentum candidates</h2><div class=wrap><table><tr><th>Rank</th><th>Stock</th><th>CMP</th><th>Score</th><th>Setup</th><th>Entry</th><th>Stop Loss</th><th>Target 1</th><th>Target 2</th><th>R:R</th><th>List</th></tr>")
+    h.append("<h2>Top momentum candidates</h2><div class=wrap><table><tr><th>Rank</th><th>Stock</th><th>CMP</th><th>Score</th><th>Setup</th><th>Entry</th><th>Stop Loss</th><th>Target 1</th><th>Target 2</th><th>R:R</th><th>Pattern hit rate (5y)</th><th>List</th></tr>")
     for i, r in enumerate(res.top, 1):
         h.append(_tr([str(i), f"<b>{E(r['Symbol'])}</b><br><span class=muted>{E(r['Sector'])}</span>", f"{r['CMP']:.2f}",
                       f"<b>{r['Score']:.0f}</b><br><span class=muted>{E(r['Class'])}</span>", E(r["Setup"]),
                       f"{r['EntryLow']:.2f}–{r['EntryHigh']:.2f}", f"{r['Stop']:.2f}<br><span class=muted>-{r['Risk%']:.1f}%</span>",
-                      f"{r['T1']:.2f}", f"{r['T2']:.2f}", f"1:{r['R:R']:.1f}", E(r["Watchlist"].title())], {0, 2, 3, 5, 6, 7, 8, 9}))
+                      f"{r['T1']:.2f}", f"{r['T2']:.2f}", f"1:{r['R:R']:.1f}", E(history_note(r, res.cfg.universe, True)),
+                      E(r["Watchlist"].title())], {0, 2, 3, 5, 6, 7, 8, 9}))
     h.append("</table></div>")
 
     for i, r in enumerate(res.top, 1):
@@ -274,7 +311,7 @@ def to_html(res: ScanResult) -> str:
         h.append("<div class=bars>" + "".join(f"<span class=bar>{E(k)} {_f(v, '{:.1f}')}/{WEIGHTS[k]}</span>" for k, v in r["Cats"].items()) + "</div>")
         h.append(f"<div class=muted>Breakout entry {r['BreakoutEntry']:.2f} · pullback entry {r['PullbackEntry']:.2f} · structure stop {r['StructureStop']:.2f} · ATR stop {r['ATRStop']:.2f} · R:R to T2 1:{r['R:R2']:.1f}</div>")
         h.append(f"<div class=muted>Fundamentals: {E(fundamentals_line(r))}</div><ol>")
-        for title, text in stock_sections(r):
+        for title, text in stock_sections(r, res.cfg.universe):
             cls_ = " class=flag" if title.startswith("Reasons") else ""
             h.append(f"<li{cls_}><b>{E(title)}.</b> {E(text)}</li>")
         h.append("</ol></div>")

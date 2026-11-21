@@ -33,18 +33,20 @@ class Pattern:
 
 
 def swing_points(series: pd.Series, window: int, kind: str) -> list[int]:
-    """Positional indices of swing highs (kind='high') or lows (kind='low')."""
-    vals = series.to_numpy()
-    out = []
-    for i in range(window, len(vals) - window):
-        seg = vals[i - window : i + window + 1]
-        if np.isnan(vals[i]):
-            continue
-        if kind == "high" and vals[i] == np.nanmax(seg):
-            out.append(i)
-        elif kind == "low" and vals[i] == np.nanmin(seg):
-            out.append(i)
-    return out
+    """Positional indices of swing highs (kind='high') or lows (kind='low').
+
+    A bar is a swing point when it equals the max (or min) of the
+    ``2*window+1`` bars centred on it; bars within ``window`` of either end
+    are never swing points. Vectorised with a centred rolling window.
+    """
+    span = 2 * window + 1
+    if len(series) < span:
+        return []
+    vals = series.to_numpy(dtype=float)
+    roll = series.rolling(span, center=True, min_periods=span)
+    ext = (roll.max() if kind == "high" else roll.min()).to_numpy()
+    hit = (vals == ext) & ~np.isnan(vals)
+    return np.flatnonzero(hit).tolist()
 
 
 def higher_highs_lows(df: pd.DataFrame, lookback: int = 120, window: int = 5) -> tuple[bool, bool]:
