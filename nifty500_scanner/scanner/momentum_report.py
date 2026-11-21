@@ -50,10 +50,10 @@ def history_note(r: dict, universe: str, short: bool = False) -> str:
         return "N/A" if short else ""
     if short:
         return f"{st['win_pct']:.0f}% ({st['avg_r']:+.2f}R, n={st['trades']})"
-    base = h.get("baseline_win_pct")
+    base = h.get("baseline_uptrend_avg_r", h.get("baseline_avg_r"))
     return (f"Backtest ({h['universe']}, {h['first_entry'][:4]}-{h['last_entry'][:4]}): this pattern reached target 1 in "
-            f"{st['win_pct']:.0f}% of {st['trades']} trades, average {st['avg_r']:+.2f}R"
-            + (f", versus {base:.0f}% for random entries" if base is not None else "") + ".")
+            f"{st['win_pct']:.0f}% of {st['trades']} trades, averaging {st['avg_r']:+.2f}R per trade"
+            + (f", versus {base:+.2f}R for random entries in uptrending stocks" if base is not None else "") + ".")
 
 
 def _cap(s: str) -> str:

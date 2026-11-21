@@ -22,6 +22,7 @@ import pandas as pd
 
 from scanner.backtest import BTConfig, run_backtest, summarise
 from scanner.data import download_benchmark, download_ohlcv, drop_incomplete_bars
+from scanner.indicators import ema
 from scanner.momentum_report import CSS
 from scanner.universe import get_universe, to_yahoo_ticker
 
@@ -87,6 +88,18 @@ def main() -> None:
                        rs=np.where(pats["rs_3m"] > 0, "beating Nifty 500 (3M)", "lagging Nifty 500 (3M)"),
                        vol=np.where(pats["rvol"] >= 1.5, "signal-day volume 1.5x+", "signal-day volume below 1.5x"))
     by_year = summarise(pats, "year").sort_index()
+    regime_tbl = pd.DataFrame()
+    if bench is not None:
+        bc = bench["Close"]
+        e50, e200 = ema(bc, 50), ema(bc, 200)
+        reg = pd.Series("Nifty 500 weak (below 50 EMA, 50 below 200)", index=bc.index)
+        reg[(bc > e50) & (e50 > e200)] = "Nifty 500 strong uptrend"
+        reg[(bc > e50) ^ (e50 > e200)] = "Nifty 500 mixed"
+        trades["regime"] = pd.to_datetime(trades["signal_date"]).map(reg)
+        pats = pats.assign(regime=pd.to_datetime(pats["signal_date"]).map(reg))
+        upb = trades[trades["path"] == "BASELINE: uptrend day"]
+        regime_tbl = pd.concat([summarise(pats, "regime").rename(lambda k: f"Patterns, {k}"),
+                                summarise(upb, "regime").rename(lambda k: f"Uptrend baseline, {k}")])
     by_ctx = pd.concat([summarise(pats, "trend"), summarise(pats, "rs"), summarise(pats, "vol")])
     first, last = pats["entry_date"].min(), pats["entry_date"].max()
 
@@ -99,10 +112,12 @@ def main() -> None:
                  "profit_factor": None if pd.isna(r["ProfitFactor"]) else float(r["ProfitFactor"])}
              for k, r in by_pattern.iterrows()}
     base_any = by_path.loc["BASELINE: any day"] if "BASELINE: any day" in by_path.index else None
+    base_up = by_path.loc["BASELINE: uptrend day"] if "BASELINE: uptrend day" in by_path.index else None
     meta = {"universe": a.universe, "generated": datetime.now().isoformat(timespec="minutes"), "first_entry": first,
             "last_entry": last, "max_hold": a.max_hold, "cost_pct": a.cost_pct,
             "baseline_win_pct": None if base_any is None else float(base_any["Win%"]),
-            "baseline_avg_r": None if base_any is None else float(base_any["AvgR"]), "patterns": stats}
+            "baseline_avg_r": None if base_any is None else float(base_any["AvgR"]),
+            "baseline_uptrend_avg_r": None if base_up is None else float(base_up["AvgR"]), "patterns": stats}
     (ROOT / "history").mkdir(exist_ok=True)
     (ROOT / "history" / f"pattern_stats_{Path(a.universe).stem}.json").write_text(json.dumps(meta, indent=2))
 
@@ -120,6 +135,7 @@ def main() -> None:
           "## By entry path and baselines", *table_md(by_path, "Path"), "",
           "## By pattern and stage", *table_md(by_stage, "Pattern / stage"), "",
           "## By market context at the signal", *table_md(by_ctx, "Context"), "",
+          "## By market regime at the signal", *table_md(regime_tbl, "Regime"), "",
           "## By year", *table_md(by_year, "Year")]
     Path(f"{stem}.md").write_text("\n".join(md), encoding="utf-8")
     page = (f"<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
@@ -129,6 +145,7 @@ def main() -> None:
             + "<h2>By entry path and baselines</h2>" + table_html(by_path, "Path")
             + "<h2>By pattern and stage</h2>" + table_html(by_stage, "Pattern / stage")
             + "<h2>By market context at the signal</h2>" + table_html(by_ctx, "Context")
+            + "<h2>By market regime at the signal</h2>" + table_html(regime_tbl, "Regime")
             + "<h2>By year</h2>" + table_html(by_year, "Year")
             + "<footer>Research output. Backtests are not forecasts.</footer></main></body></html>")
     Path(f"{stem}.html").write_text(page, encoding="utf-8")

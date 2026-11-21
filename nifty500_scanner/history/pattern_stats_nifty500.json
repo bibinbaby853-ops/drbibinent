@@ -1,28 +1,29 @@
 {
   "universe": "nifty500",
-  "generated": "2026-11-21T04:28",
+  "generated": "2026-11-21T04:32",
   "first_entry": "2021-11-23",
   "last_entry": "2026-11-20",
   "max_hold": 20,
   "cost_pct": 0.3,
   "baseline_win_pct": 20.51,
   "baseline_avg_r": 0.07,
+  "baseline_uptrend_avg_r": 0.13,
   "patterns": {
     "Emerging from long consolidation": {
-      "trades": 452,
-      "win_pct": 28.54,
-      "avg_r": 0.16,
-      "profit_factor": 1.19
+      "trades": 449,
+      "win_pct": 28.51,
+      "avg_r": 0.15,
+      "profit_factor": 1.18
     },
     "Breakout retest": {
-      "trades": 2359,
-      "win_pct": 30.39,
-      "avg_r": 0.13,
+      "trades": 2361,
+      "win_pct": 30.37,
+      "avg_r": 0.12,
       "profit_factor": 1.11
     },
     "50-day high breakout": {
-      "trades": 1468,
-      "win_pct": 32.7,
+      "trades": 1469,
+      "win_pct": 32.74,
       "avg_r": 0.12,
       "profit_factor": 1.18
     },
@@ -33,46 +34,46 @@
       "profit_factor": 0.68
     },
     "Bull flag": {
-      "trades": 492,
-      "win_pct": 36.59,
-      "avg_r": 0.04,
-      "profit_factor": 1.08
+      "trades": 495,
+      "win_pct": 36.97,
+      "avg_r": 0.05,
+      "profit_factor": 1.11
     },
     "Tight consolidation": {
-      "trades": 2606,
-      "win_pct": 41.75,
+      "trades": 2608,
+      "win_pct": 41.72,
       "avg_r": 0.04,
       "profit_factor": 1.02
     },
-    "Bull pennant": {
-      "trades": 32,
-      "win_pct": 37.5,
-      "avg_r": 0.03,
-      "profit_factor": 1.05
-    },
     "Cup and handle": {
-      "trades": 432,
-      "win_pct": 31.94,
+      "trades": 431,
+      "win_pct": 31.79,
       "avg_r": 0.02,
       "profit_factor": 0.95
     },
-    "20-day high breakout": {
-      "trades": 861,
-      "win_pct": 45.53,
-      "avg_r": 0.01,
-      "profit_factor": 0.91
-    },
     "Higher lows into resistance": {
-      "trades": 455,
-      "win_pct": 27.69,
-      "avg_r": 0.01,
-      "profit_factor": 0.91
+      "trades": 454,
+      "win_pct": 27.97,
+      "avg_r": 0.02,
+      "profit_factor": 0.9
+    },
+    "20-day high breakout": {
+      "trades": 860,
+      "win_pct": 45.47,
+      "avg_r": 0.0,
+      "profit_factor": 0.9
     },
     "Consolidation breakout": {
       "trades": 1378,
       "win_pct": 45.94,
       "avg_r": -0.01,
       "profit_factor": 0.91
+    },
+    "Bull pennant": {
+      "trades": 31,
+      "win_pct": 38.71,
+      "avg_r": -0.01,
+      "profit_factor": 0.97
     }
   }
 }
