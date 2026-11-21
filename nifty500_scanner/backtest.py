@@ -52,6 +52,134 @@ def table_html(df: pd.DataFrame, index_name: str) -> str:
     return "".join(h)
 
 
+SEGMENTS = {"nifty100": "Large", "midcap150": "Mid", "smallcap250": "Small", "microcap250": "Micro"}
+
+
+def latest_ready() -> pd.DataFrame:
+    """READY TO TRADE rows from the newest momentum CSV of each cap segment."""
+    import glob
+
+    rows = []
+    for uni, seg in SEGMENTS.items():
+        files = sorted(glob.glob(str(ROOT / "output" / f"momentum_{uni}_*.csv")))
+        if not files:
+            continue
+        d = pd.read_csv(files[-1])
+        d = d[d["Watchlist"] == "READY TO TRADE"].copy()
+        d["Segment"], d["Report"] = seg, Path(files[-1]).name
+        rows.append(d)
+    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
+
+
+def _stats(df: pd.DataFrame) -> dict:
+    if df.empty:
+        return {"n": 0, "win": np.nan, "r": np.nan, "net": np.nan}
+    return {"n": len(df), "win": df["hit_t1"].mean() * 100, "r": df["r_t1"].mean(), "net": df["net_pct"].mean()}
+
+
+def _fmt(st: dict) -> str:
+    if st["n"] == 0:
+        return "no past signals"
+    return f"{st['n']} trades, {st['win']:.0f}% hit, {st['r']:+.2f}R, {st['net']:+.2f}% net"
+
+
+def ready_mode(a) -> None:
+    import glob
+
+    ready = latest_ready()
+    if ready.empty:
+        print("No READY TO TRADE rows found; run momentum_scan.py first.")
+        return
+    syms = ready["Symbol"].tolist()
+    data = download_ohlcv([to_yahoo_ticker(s) for s in syms], period="7y", cache_tag="bt_ready_" + "_".join(sorted(syms))[:60])
+    bench = download_benchmark("^CRSLDX", period="7y")
+    data, _ = drop_incomplete_bars(data)
+    cfg = BTConfig(start=a.start, max_hold=a.max_hold, cost_pct=a.cost_pct, min_turnover_cr=min(a.min_turnover_cr, 2.0))
+    trades = run_backtest(data, bench, cfg, workers=a.workers)
+    pats = trades[~trades["path"].str.startswith("BASELINE")] if not trades.empty else trades
+
+    # universe reference: the newest full Nifty 500 run, same pattern, in today's kind of context
+    ref = None
+    big = sorted(glob.glob(str(ROOT / "output" / "backtest_nifty500_*_trades.csv")))
+    if big:
+        ref = pd.read_csv(big[-1])
+        bc = bench["Close"]
+        e50, e200 = ema(bc, 50), ema(bc, 200)
+        strong = ((bc > e50) & (e50 > e200)).reindex(pd.to_datetime(ref["signal_date"])).to_numpy()
+        ref = ref[(~ref["path"].str.startswith("BASELINE")) & strong & ref["above_200"] & (ref["rs_3m"] > 0)]
+
+    rows, details = [], []
+    for _, r in ready.iterrows():
+        s = r["Symbol"]
+        setup = str(r["Setup"])
+        own = pats[pats["symbol"] == s] if not pats.empty else pats
+        same = own[own["pattern"].apply(lambda x: setup.startswith(x))] if not own.empty else own
+        base = trades[(trades["symbol"] == s) & (trades["path"] == "BASELINE: uptrend day")] if not trades.empty else trades
+        uni = _stats(ref[ref["pattern"].apply(lambda x: setup.startswith(x))]) if ref is not None else {"n": 0}
+        st_same, st_all, st_base = _stats(same), _stats(own), _stats(base)
+        hist_bars = len(data.get(to_yahoo_ticker(s), [])) if data.get(to_yahoo_ticker(s)) is not None else 0
+        if hist_bars < 320:
+            verdict = "Too little price history to test (recent listing)"
+        elif st_same["n"] >= 5 and st_same["r"] >= 0.2:
+            verdict = "This setup has worked on this stock"
+        elif st_same["n"] >= 5 and st_same["r"] < 0:
+            verdict = "This setup has lost money on this stock"
+        elif st_same["n"] >= 5:
+            verdict = "This setup has been roughly break-even on this stock"
+        else:
+            verdict = "Too few past signals on this stock; lean on the Nifty 500 figure"
+        rows.append({"Stock": s, "Segment": r["Segment"], "Score": r["Score"], "Setup": setup,
+                     "Entry": f"{r['EntryLow']:.2f}-{r['EntryHigh']:.2f}", "Stop": r["Stop"], "T1": r["T1"],
+                     "Same setup on this stock": _fmt(st_same), "All patterns on this stock": _fmt(st_all),
+                     "Random uptrend entries on this stock": _fmt(st_base), "Same setup, Nifty 500, similar conditions": _fmt(uni),
+                     "Verdict": verdict, "_r": st_same["r"], "_n": st_same["n"], "_ur": uni.get("r", np.nan)})
+        last = same.sort_values("entry_date").tail(6)
+        details.append((s, setup, [f"{x.entry_date}: entry {x.entry:.2f}, stop {x.stop:.2f}, {x.exit_reason} on {x.exit_date} "
+                                   f"at {x.exit:.2f} ({x.r_t1:+.2f}R, {x.net_pct:+.2f}% net, {x.days} sessions)" for x in last.itertuples()]))
+
+    res = pd.DataFrame(rows)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M")
+    stem = ROOT / "output" / f"backtest_ready_{stamp}"
+    if not trades.empty:
+        trades.to_csv(f"{stem}_trades.csv", index=False)
+    res.drop(columns=["_r", "_n", "_ur"]).to_csv(f"{stem}.csv", index=False)
+    first = pats["entry_date"].min() if not pats.empty else "n/a"
+    intro = [f"Ready-to-trade stocks from: {', '.join(sorted(set(ready['Report'])))}.",
+             f"Each stock's own history was replayed from {first} with the live entry, stop, target 1 and a {a.max_hold}-session time stop, "
+             f"net of {a.cost_pct}% costs. 'Hit' means target 1 before the stop; R is the result in multiples of the initial risk.",
+             "Single-stock samples are small: fewer than 5 past signals says little, and even 10 is weak evidence. The Nifty 500 column "
+             "(same setup, Nifty 500 in an uptrend, stock above its 200 EMA and beating the index) is the more reliable estimate.",
+             "Today's index members only (survivorship bias); past results are not forecasts."]
+    cols = ["Stock", "Segment", "Score", "Setup", "Entry", "Stop", "T1", "Same setup on this stock", "All patterns on this stock",
+            "Random uptrend entries on this stock", "Same setup, Nifty 500, similar conditions", "Verdict"]
+    md = ["# Backtest of today's ready-to-trade stocks", *intro, "",
+          "| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
+    for _, r in res.iterrows():
+        md.append("| " + " | ".join(str(r[c]) for c in cols) + " |")
+    md.append("")
+    for s, setup, lines in details:
+        md.append(f"### {s}: past {setup.split(',')[0].lower()} signals")
+        md += [f"- {x}" for x in lines] or ["- none"]
+    Path(f"{stem}.md").write_text("\n".join(md), encoding="utf-8")
+    h = [f"<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+         f"<title>Ready Trades Backtest</title><style>{CSS}</style></head><body><main><h1>Ready Trades Backtest</h1>",
+         *[f"<p class=muted>{E(x)}</p>" for x in intro],
+         "<div class=wrap><table><tr>" + "".join(f"<th>{E(c)}</th>" for c in cols) + "</tr>"]
+    for _, r in res.iterrows():
+        cls = "on" if (r["_n"] >= 5 and r["_r"] >= 0.2) else ("off" if (r["_n"] >= 5 and r["_r"] < 0) else "neutral")
+        h.append("<tr>" + "".join(f"<td class='{cls}'><b>{E(str(r[c]))}</b></td>" if c == "Verdict" else f"<td>{E(str(r[c]))}</td>" for c in cols) + "</tr>")
+    h.append("</table></div>")
+    for s, setup, lines in details:
+        h.append(f"<div class=card><h3>{E(s)}: past {E(setup.split(',')[0].lower())} signals</h3><ul>"
+                 + ("".join(f"<li>{E(x)}</li>" for x in lines) or "<li>none</li>") + "</ul></div>")
+    h.append("<footer>Research output. Backtests are not forecasts.</footer></main></body></html>")
+    Path(f"{stem}.html").write_text("".join(h), encoding="utf-8")
+    with pd.option_context("display.width", 250, "display.max_colwidth", 60):
+        print(res[["Stock", "Segment", "Setup", "Same setup on this stock", "Random uptrend entries on this stock",
+                   "Same setup, Nifty 500, similar conditions", "Verdict"]].to_string(index=False))
+    print(f"\nReports:\n  {stem}.html\n  {stem}.md\n  {stem}.csv")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Five-year walk-forward backtest of the chart-pattern setups.")
     p.add_argument("--universe", default="nifty500")
@@ -61,10 +189,15 @@ def main() -> None:
     p.add_argument("--min-turnover-cr", type=float, default=5.0)
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--limit", type=int, default=0, help="Only test the first N stocks (for a quick trial)")
+    p.add_argument("--ready", action="store_true",
+                   help="Backtest only the stocks on the latest READY TO TRADE lists (all four cap segments)")
     a = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
     for noisy in ("yfinance", "peewee", "urllib3"):
         logging.getLogger(noisy).setLevel(logging.CRITICAL)
+    if a.ready:
+        ready_mode(a)
+        return
 
     uni = get_universe(a.universe)
     tickers = [to_yahoo_ticker(u["symbol"]) for u in uni][: a.limit or None]
