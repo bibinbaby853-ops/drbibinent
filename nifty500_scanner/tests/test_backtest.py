@@ -41,3 +41,11 @@ def test_backtest_stock_runs_without_lookahead_errors():
     assert (df["entry"] > df["stop"]).all()
     s = summarise(df, "path")
     assert {"Trades", "Win%", "AvgR"}.issubset(s.columns)
+
+
+def test_no_trade_entered_almost_on_the_stop():
+    raw = synthetic_ohlcv(n_days=700, seed=3, drift=0.0015, vol=0.015)
+    raw["Volume"] = raw["Volume"] * 50
+    trades = pd.DataFrame(backtest_stock(("SYN", raw, None, BTConfig(start=str(raw.index[350].date()), min_turnover_cr=0.0))))
+    pats = trades[~trades["path"].str.startswith("BASELINE")]
+    assert ((pats["entry"] - pats["stop"]) / pats["entry"] > 0.003).all()

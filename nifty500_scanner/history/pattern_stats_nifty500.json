@@ -1,6 +1,6 @@
 {
   "universe": "nifty500",
-  "generated": "2026-11-21T04:32",
+  "generated": "2026-11-21T08:20",
   "first_entry": "2021-11-23",
   "last_entry": "2026-11-20",
   "max_hold": 20,
@@ -10,70 +10,70 @@
   "baseline_uptrend_avg_r": 0.13,
   "patterns": {
     "Emerging from long consolidation": {
-      "trades": 449,
-      "win_pct": 28.51,
-      "avg_r": 0.15,
-      "profit_factor": 1.18
+      "trades": 450,
+      "win_pct": 28.67,
+      "avg_r": 0.16,
+      "profit_factor": 1.19
     },
     "Breakout retest": {
-      "trades": 2361,
-      "win_pct": 30.37,
-      "avg_r": 0.12,
+      "trades": 2173,
+      "win_pct": 32.03,
+      "avg_r": 0.11,
       "profit_factor": 1.11
     },
     "50-day high breakout": {
-      "trades": 1469,
-      "win_pct": 32.74,
-      "avg_r": 0.12,
-      "profit_factor": 1.18
-    },
-    "Volatility contraction (VCP)": {
-      "trades": 220,
-      "win_pct": 35.0,
-      "avg_r": 0.07,
-      "profit_factor": 0.68
-    },
-    "Bull flag": {
-      "trades": 495,
-      "win_pct": 36.97,
-      "avg_r": 0.05,
-      "profit_factor": 1.11
+      "trades": 1467,
+      "win_pct": 32.52,
+      "avg_r": 0.11,
+      "profit_factor": 1.17
     },
     "Tight consolidation": {
-      "trades": 2608,
-      "win_pct": 41.72,
+      "trades": 2603,
+      "win_pct": 41.8,
       "avg_r": 0.04,
       "profit_factor": 1.02
     },
+    "Bull flag": {
+      "trades": 493,
+      "win_pct": 36.51,
+      "avg_r": 0.04,
+      "profit_factor": 1.07
+    },
+    "Higher lows into resistance": {
+      "trades": 458,
+      "win_pct": 27.95,
+      "avg_r": 0.02,
+      "profit_factor": 0.91
+    },
     "Cup and handle": {
-      "trades": 431,
-      "win_pct": 31.79,
+      "trades": 430,
+      "win_pct": 31.63,
       "avg_r": 0.02,
       "profit_factor": 0.95
     },
-    "Higher lows into resistance": {
-      "trades": 454,
-      "win_pct": 27.97,
-      "avg_r": 0.02,
-      "profit_factor": 0.9
-    },
     "20-day high breakout": {
-      "trades": 860,
-      "win_pct": 45.47,
+      "trades": 861,
+      "win_pct": 45.41,
       "avg_r": 0.0,
       "profit_factor": 0.9
-    },
-    "Consolidation breakout": {
-      "trades": 1378,
-      "win_pct": 45.94,
-      "avg_r": -0.01,
-      "profit_factor": 0.91
     },
     "Bull pennant": {
       "trades": 31,
       "win_pct": 38.71,
       "avg_r": -0.01,
       "profit_factor": 0.97
+    },
+    "Consolidation breakout": {
+      "trades": 1375,
+      "win_pct": 46.04,
+      "avg_r": -0.01,
+      "profit_factor": 0.91
+    },
+    "Volatility contraction (VCP)": {
+      "trades": 220,
+      "win_pct": 34.55,
+      "avg_r": -0.11,
+      "profit_factor": 0.64
     }
   }
 }

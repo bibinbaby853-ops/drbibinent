@@ -136,10 +136,14 @@ def backtest_stock(args) -> list[dict]:
             rs = ((c[t] / c[t - 63]) - (b.iloc[t] / b.iloc[t - 63])) * 100
         return bool(c[t] > df["EMA200"].iat[t]) if not np.isnan(df["EMA200"].iat[t]) else False, float(rv[t]), float(rs)
 
+    atr_arr = df["ATR14"].to_numpy()
+
     def record(t_sig, pat, stage, path, i_e, entry, stop, t1, t2):
         nonlocal busy_until
         if entry <= stop or i_e >= n:
             return
+        if entry - stop < 0.5 * atr_arr[t_sig]:
+            return  # filled almost on the stop: the setup is close to invalid, a trader would stand aside
         j, px, why, ht1, ht2 = _simulate(df, i_e, entry, stop, t1, t2, cfg.max_hold)
         risk = entry - stop
         a200, rvol, rs3 = ctx(t_sig)
