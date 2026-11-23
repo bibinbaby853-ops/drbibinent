@@ -26,13 +26,13 @@ Throughout these files, **[Verified]** means I checked it on 23 Nov 2026. **[Rec
 
 1. **[Verified] The live website is not the code in this repository.** `https://drbibinent.com/` serves a large single-page site titled *"Dr. Bibin Baby — Consultant ENT Surgeon | Pala, Kottayam"* with clean URLs such as `/sinus-surgery-fess/`, `/vertigo-balance/`, `/pediatric-ent/`, `/snoring-sleep-apnoea/`, `/voice-swallowing/`. The repo's pages (`about.html`, `sinus.html` …) and its `sitemap.xml` (listing `/about`, `/sinus`, `/vertigo`, `/blog`, `/contact`) do **not** match it: `https://drbibinent.com/about` returns **404**. If this repo's `sitemap.xml` is ever uploaded, it will send Google to pages that don't exist. Decide which version is the real site and keep only one.
 2. **[Verified] Live-site problems that cost you patients today:**
-   - The phone number and the "WhatsApp the Clinic" / "Book a Vertigo Consultation" buttons link to `#` (they do nothing on a phone).
+   - ~~Phone and WhatsApp buttons link to `#`.~~ **Corrected 23 Nov 2026:** checked in a real browser, all call and WhatsApp buttons work (JavaScript fills in `tel:+919645564883` and `wa.me/919645564883` links when the page loads). The first check read the page without running JavaScript.
    - The footer still shows the placeholders `[[REGISTRATION-NUMBER]]` and `[[REGISTERING-COUNCIL]]`. For a doctor's site this is the single biggest trust (E-E-A-T) gap: fill in your TCMC registration.
    - No consultation timings are published.
    - No embedded Google Map; only "Get Directions" short links.
    - The "Blog" menu item goes to an external Manorama Online article, not to articles on your own site.
    - The "Questionnaires" menu item is a placeholder (`#`).
-   - I could not confirm any structured data (schema) on the live homepage. Test it in Google's Rich Results Test.
+   - **Corrected:** the live homepage does have Physician structured data (schema). Validate it in Google's Rich Results Test.
 3. **[Verified] Your site already appears** in web search results for "ENT specialist Pala Kottayam Kerala", alongside Mar Sleeva Medicity, Carmel Medical Centre Pala and Practo listings. A search for "Dr Bibin Baby ENT Pala" did **not** surface you; it returned similarly named doctors elsewhere. Your **brand-name search** is weak, which is the easiest thing to fix (GBP + consistent citations).
 4. **[Verified] New NMC rules apply.** NMC's *Guidelines on Ethical Advertising and Public Communication* (public notice of 6 Oct 2026, effective immediately) bring Google profiles, social media and AI content under advertising rules, and bar testimonials and fake or paid reviews. Secondary sources disagree on whether *asking* patients for Google reviews is allowed. The review strategy (file 6) is written around this. Read the official NMC notice, or take advice from TCMC or a lawyer, before running any review-request campaign.
 5. **[Verified] Qualifications on the live site:** MBBS (GMC Kottayam), MS ENT (GMC Kozhikode), DNB ENT, AVISA vestibular medicine programme, paediatric vestibular course, AOI and IMA membership; languages Malayalam, English, Hindi. All content in this folder uses only these facts.
@@ -43,8 +43,8 @@ Throughout these files, **[Verified]** means I checked it on 23 Nov 2026. **[Rec
 - Competitors' Google Maps ratings and review counts. File 7 includes a 15-minute manual method.
 
 ## The five things to do this week
-1. Fix the dead phone and WhatsApp buttons (`tel:+919645564883`, `https://wa.me/919645564883`).
+1. ~~Fix phone/WhatsApp buttons~~ (they already work; see correction above).
 2. Replace the registration placeholders with your real TCMC number.
 3. Claim and verify the Google Business Profile, then complete it with file 1.
 4. Publish consultation hours on the site and GBP, identical in both.
-5. Add Physician/MedicalClinic schema (ready code in file 3) and submit the site in Google Search Console.
+5. Validate the existing schema and submit the site in Google Search Console.

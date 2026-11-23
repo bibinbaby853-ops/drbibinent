@@ -7,7 +7,7 @@ Tasks are listed in priority order within each phase.
 
 | # | Task | Impact | Diff. | Cost | Owner | Done |
 |---|---|---|---|---|---|---|
-| 1 | Fix the `tel:` and `wa.me` links on every button of the live site | H | E | ₹0 | Web developer | ☐ |
+| 1 | ~~Fix phone/WhatsApp links~~ (verified working 23 Nov) | – | – | – | – | ☑ |
 | 2 | Fill in the TCMC registration number and council in the footer and About section | H | E | ₹0 | Doctor + developer | ☐ |
 | 3 | Claim/verify GBP; remove duplicates; set the name, categories, hours and pin (file 1) | H | E–M | ₹0 | Doctor | ☐ |
 | 4 | Paste the GBP description, services and attributes (file 1 C–D) | H | E | ₹0 | Clinic staff | ☐ |

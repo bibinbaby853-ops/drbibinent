@@ -4,14 +4,13 @@
 
 | # | Problem | Fix | Impact |
 |---|---|---|---|
-| 1 | Phone number links to `#` | `<a href="tel:+919645564883">+91 96455 64883</a>` | High: calls are your main conversion |
-| 2 | "WhatsApp the Clinic" and booking buttons link to `#` | `https://wa.me/919645564883?text=Hello%2C%20I%20would%20like%20an%20ENT%20appointment` | High |
+| 1–2 | ~~Phone and WhatsApp links~~ | **Corrected:** verified working in a browser (set by JavaScript on load). Optional: put the real `tel:`/`wa.me` URLs directly in the HTML so they also work if JavaScript fails | Low |
 | 3 | `[[REGISTRATION-NUMBER]]` and `[[REGISTERING-COUNCIL]]` placeholders in footer | "Reg. No. XXXXX, Travancore-Cochin Medical Council" | High: trust (E-E-A-T) and NMC transparency |
 | 4 | No consultation timings | Add a timings table for Pala and Erattupetta (same as GBP) | High |
 | 5 | "Blog" goes off-site | Create `/blog/` on your domain; keep the Manorama article as an "In the media" link | Medium |
 | 6 | "Questionnaires" link is `#` | Remove it until it's built, or link to a real dizziness or snoring questionnaire page | Low |
 | 7 | No embedded map | Embed the Google Map of your **GBP listing** on the Locations section/contact page | Medium |
-| 8 | Schema not confirmed | Add the JSON-LD in section F; test it in the Rich Results Test | Medium |
+| 8 | Schema present (Physician) | Validate it; compare with section F and add anything missing (hours, credentials) | Low |
 | 9 | Two versions of the site exist (this repo vs live) | Pick one source of truth. If the live site is the real one, don't deploy this repo's `sitemap.xml` (it lists URLs that 404) | Medium |
 | 10 | Homepage is ~118 KB of HTML with many sections | Fine to keep, but make sure each condition has its **own page** (already partly done) and that the homepage links to every one | Medium |
 
