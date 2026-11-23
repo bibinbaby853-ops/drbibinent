@@ -29,7 +29,8 @@ def tier(row) -> tuple[int, str]:
         return 3, "C: setup has no proven edge across the Nifty 500"
     if n >= 2 and own < 0:
         return 3, "C: setup has lost money on this stock before"
-    if n >= 5 and own >= 0.2:
+    net = row.get("SameNet", np.nan)
+    if n >= 5 and own >= 0.2 and not pd.isna(net) and net > 0:
         return 1, "A: setup works across the Nifty 500 and on this stock"
     return 2, "B: setup works across the Nifty 500; little stock-specific history"
 
@@ -51,7 +52,7 @@ def main() -> None:
     bt = sorted(glob.glob(str(ROOT / "output" / "backtest_ready_*[0-9].csv")))
     if bt:
         ev = pd.read_csv(bt[-1]).rename(columns={"Stock": "Symbol"})
-        keep = ["Symbol", "SameN", "SameR", "UniR", "Same setup on this stock", "Same setup, Nifty 500, similar conditions", "Verdict"]
+        keep = ["Symbol", "SameN", "SameR", "SameNet", "UniR", "Same setup on this stock", "Same setup, Nifty 500, similar conditions", "Verdict"]
         ready = ready.merge(ev[[c for c in keep if c in ev.columns]], on="Symbol", how="left")
     held = set()
     if a.holdings and Path(a.holdings).exists():

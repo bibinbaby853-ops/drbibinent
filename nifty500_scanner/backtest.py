@@ -120,7 +120,7 @@ def ready_mode(a) -> None:
         hist_bars = len(data.get(to_yahoo_ticker(s), [])) if data.get(to_yahoo_ticker(s)) is not None else 0
         if hist_bars < 320:
             verdict = "Too little price history to test (recent listing)"
-        elif st_same["n"] >= 5 and st_same["r"] >= 0.2:
+        elif st_same["n"] >= 5 and st_same["r"] >= 0.2 and st_same["net"] > 0:
             verdict = "This setup has worked on this stock"
         elif st_same["n"] >= 5 and st_same["r"] < 0:
             verdict = "This setup has lost money on this stock"
@@ -132,7 +132,8 @@ def ready_mode(a) -> None:
                      "Entry": f"{r['EntryLow']:.2f}-{r['EntryHigh']:.2f}", "Stop": r["Stop"], "T1": r["T1"],
                      "Same setup on this stock": _fmt(st_same), "All patterns on this stock": _fmt(st_all),
                      "Random uptrend entries on this stock": _fmt(st_base), "Same setup, Nifty 500, similar conditions": _fmt(uni),
-                     "Verdict": verdict, "_r": st_same["r"], "_n": st_same["n"], "_ur": uni.get("r", np.nan)})
+                     "Verdict": verdict, "_r": st_same["r"], "_n": st_same["n"], "_ur": uni.get("r", np.nan),
+                     "SameNet": st_same["net"]})
         last = same.sort_values("entry_date").tail(6)
         details.append((s, setup, [f"{x.entry_date}: entry {x.entry:.2f}, stop {x.stop:.2f}, {x.exit_reason} on {x.exit_date} "
                                    f"at {x.exit:.2f} ({x.r_t1:+.2f}R, {x.net_pct:+.2f}% net, {x.days} sessions)" for x in last.itertuples()]))
@@ -150,6 +151,7 @@ def ready_mode(a) -> None:
              "Single-stock samples are small: fewer than 5 past signals says little, and even 10 is weak evidence. The Nifty 500 column "
              "(same setup, Nifty 500 in an uptrend, stock above its 200 EMA and beating the index) is the more reliable estimate.",
              "Today's index members only (survivorship bias); past results are not forecasts."]
+    res = res.drop(columns=["SameNet"]).join(res[["SameNet"]]) if "SameNet" in res else res
     cols = ["Stock", "Segment", "Score", "Setup", "Entry", "Stop", "T1", "Same setup on this stock", "All patterns on this stock",
             "Random uptrend entries on this stock", "Same setup, Nifty 500, similar conditions", "Verdict"]
     md = ["# Backtest of today's ready-to-trade stocks", *intro, "",
