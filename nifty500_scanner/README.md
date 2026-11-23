@@ -110,6 +110,12 @@ python backtest.py --start 2022-01-01 --max-hold 15 --cost-pct 0.4
 * Two baselines (random days, and random uptrend days) use the same stop and
   target distances, so each pattern's hit rate can be judged against chance.
 
+`python backtest.py --ready` replays only the stocks on the newest READY
+lists of the four cap segments, comparing each stock's own record with the
+setup's Nifty 500 record. `python ready_list.py --capital 500000` then merges
+the four READY lists with that evidence into one ranked list (tiers A, B, C)
+with share counts sized to the given account.
+
 It writes `output/backtest_<universe>_<time>.html/.md/_trades.csv` and
 `history/pattern_stats_<universe>.json`. The daily momentum report reads that
 file and shows each setup's five-year hit rate and average R.
@@ -170,7 +176,8 @@ nifty500_scanner/
   run_scan.py            setup scanner entry point
   momentum_scan.py       daily momentum report entry point
   portfolio_review.py    read-only review of broker holdings
-  backtest.py            five-year pattern backtest
+  backtest.py            five-year pattern backtest (--ready for today's list)
+  ready_list.py          consolidated, evidence-ranked ready-to-trade list
   scanner/
     universe.py          NSE constituent list + bundled fallback
     data.py              yfinance download, daily cache, synthetic data

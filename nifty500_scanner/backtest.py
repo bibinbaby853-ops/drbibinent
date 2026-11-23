@@ -142,7 +142,7 @@ def ready_mode(a) -> None:
     stem = ROOT / "output" / f"backtest_ready_{stamp}"
     if not trades.empty:
         trades.to_csv(f"{stem}_trades.csv", index=False)
-    res.drop(columns=["_r", "_n", "_ur"]).to_csv(f"{stem}.csv", index=False)
+    res.rename(columns={"_r": "SameR", "_n": "SameN", "_ur": "UniR"}).to_csv(f"{stem}.csv", index=False)
     first = pats["entry_date"].min() if not pats.empty else "n/a"
     intro = [f"Ready-to-trade stocks from: {', '.join(sorted(set(ready['Report'])))}.",
              f"Each stock's own history was replayed from {first} with the live entry, stop, target 1 and a {a.max_hold}-session time stop, "
