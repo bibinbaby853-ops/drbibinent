@@ -76,3 +76,29 @@ KERALA-WIDE TARGETING (24 Nov)
   abroad) and sharing travel dates. There is no online-consultation claim.
 - "Vertigo specialist" is not used, because it is not a recognised
   qualification. The wording is "vertigo care" or "vertigo treatment" instead.
+
+SURGERY + VERTIGO (ALLIED SPECIALITY) EMPHASIS (24 Nov)
+- Homepage H1: "ENT Surgery and Vertigo Care in Pala, Kerala".
+- Hero text now opens with the surgical work (endoscopic sinus and nasal
+  surgery, ear surgery, tonsil and adenoid surgery) and names vertigo and
+  balance care as an allied speciality.
+- Section order: About -> ENT Surgery -> Vertigo and Balance Care -> then
+  the rest. Surgery and vertigo were 5th and 6th before; they are now 2nd and
+  3rd. The menu follows the same order.
+- Labels: "Surgical Expertise" is now "ENT Surgery". "Subspecialty Focus" is
+  now "Allied Speciality · Vestibular Medicine", on the homepage and on the
+  vertigo page.
+- Each surgery card now links to its detailed guide page. The vertigo section
+  links to /vertigo-balance/.
+- Structured data:
+  - Physician: knowsAbout added (surgeries and vestibular medicine).
+  - hasCredential added (degrees and the AVISA programme).
+  - The clinic lists availableService (the 4 surgical procedures plus the
+    vertigo assessment).
+- New homepage meta description that leads with surgery and vertigo.
+- BUG FIX: the highlighted words in the homepage heading were invisible
+  (their colour style was empty). This also affects the live site today.
+  They now show in gold.
+- Words like "expert", "skilled", "best" or "advanced" are not used, because
+  NMC rules do not allow them. Emphasis comes from position, headings, links
+  and structured data.
