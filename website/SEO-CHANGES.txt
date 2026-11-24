@@ -103,3 +103,12 @@ SURGERY + VERTIGO (ALLIED SPECIALITY) EMPHASIS (24 Nov)
 - Words like "expert", "skilled", "best" or "advanced" are not used, because
   NMC rules do not allow them. Emphasis comes from position, headings, links
   and structured data.
+
+PLACE DE-EMPHASISED (24 Nov, at your request)
+- Page titles, the homepage H1 and the meta descriptions no longer name
+  Pala, Kottayam or Kerala. They lead with the condition or procedure and
+  "Dr. Bibin Baby, ENT Surgeon". Example: "Vertigo & Dizziness Treatment |
+  Dr. Bibin Baby, ENT Surgeon".
+- Homepage H1: "ENT Surgery and Vertigo Care".
+- The address is still in the Locations section, the footer and the
+  structured data. Google Maps and the Google Business Profile still need it.
