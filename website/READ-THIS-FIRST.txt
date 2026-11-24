@@ -1,0 +1,248 @@
+DRBIBINENT.COM — NMC COMPLIANCE REWORK
+======================================
+Staging copy prepared 11 October 2026. Not yet uploaded.
+
+
+BEFORE YOU UPLOAD: ONE THING YOU MUST DO
+----------------------------------------
+There are 36 placeholders across the site that read:
+
+    [[REGISTRATION-NUMBER]]
+    [[REGISTERING-COUNCIL]]
+
+I have not invented a registration number, and I will not. Find and replace
+both placeholders throughout every file before this goes live:
+
+    [[REGISTRATION-NUMBER]]  ->  your medical register number
+    [[REGISTERING-COUNCIL]]  ->  the council you are registered with,
+                                 for example: Travancore-Cochin Medical Council
+
+These appear in the homepage footer, the three policy pages, the eight
+procedure pages, and the structured data. If you upload without replacing
+them, visitors will see the raw placeholder text.
+
+Before filling them in, please also confirm that every qualification shown on
+the site is registered with that council, because displaying an unregistered
+additional qualification is a separate problem.
+
+
+WHAT CHANGED
+------------
+
+CRITICAL
+
+  C1  The questionnaire funnel has been rebuilt as a neutral clinical tool.
+      Removed: the "permanent fix" headline, the "Surgery-related" filter,
+      the "Surgical evaluation" badges, and all automated advice that named
+      an operation. The severe-band advice now says what the next step in
+      assessment is, without naming a procedure or promising an outcome.
+      All 14 instruments were re-tested: they still score correctly from
+      minimum to declared maximum, severity bands resolve at both ends, and
+      subscales reconcile to totals.
+
+  C2  Three policy pages written and linked from every footer:
+      /privacy/, /terms/, /disclaimer/.
+      The privacy page describes the real data flows, which are narrower
+      than I had assumed in the audit. Clauses needing a lawyer are marked
+      in red on the pages themselves.
+
+  C3  CORRECTION TO MY AUDIT. I rated this Critical from memory. With the
+      deployed file in front of me the position is better than I said:
+        - The appointment form genuinely stores nothing. It composes a
+          WhatsApp message and nothing else. That statement was true.
+        - The silent lead-capture code existed but posted to Netlify Forms,
+          and you are on Cloudflare, which has no form backend. It was
+          collecting nothing.
+      The code has been removed anyway, because it would silently start
+      working again if you ever moved hosts.
+
+  C4  Registration disclosure blocks added to the homepage footer, the
+      policy pages, the procedure pages and the structured data, pending
+      the number above.
+
+
+HIGH
+
+  H1  Removed "a subspecialty focus few ENT practices in the region offer".
+  H2  "Positional vertigo cured ... often in a single visit" is now
+      "treated with repositioning manoeuvres ... response varies between
+      patients". "Proven, medication-free recovery" is now descriptive.
+  H3  The 85 to 90 per cent graft figure is reframed as published series
+      with the factors that affect an individual result, in both the
+      English text and the Malayalam box on the ear surgery page.
+  H4  REMOVED AT YOUR REQUEST (11 October). The "About this information"
+      block carrying authorship, clinical reviewer, review date and the
+      artificial-intelligence statement has been taken off the homepage and
+      all eight procedure pages. The registration disclosure that sat inside
+      it has been moved into each page footer so it is not lost.
+      Audit finding H4 is therefore open again. See the note at the end.
+  H5  The portrait has moved out of the hero into a modest image in the
+      About section, with the "Trusted Surgical Care" badge removed from
+      beside it. It is no longer the social sharing image, and the card
+      type has dropped from large image to summary. This is the interim
+      position pending your lawyer's view on paragraph 9.2.
+  H6  Promotional headings rewritten as descriptive ones:
+        Why Choose Us                  -> How Consultations Work
+        Specialist-Led Care...         -> How Consultations Work
+        Precision Surgery, Faster...   -> Surgical Procedures Performed
+        Answers From the Specialist    -> Frequently Asked Questions
+        Learn From Your Doctor         -> Health Information
+        Trusted Surgical Care          -> Surgical Procedures
+      The "Precision with Compassion" tagline and the "world-renowned
+      faculty" description are gone.
+  H7  The thirteen-phrase keywords tag is removed.
+  H8  The "New" badge, the "Free" framing and the pulsing button animation
+      are removed from the questionnaire card.
+
+
+MEDIUM
+
+  M1  One entity name throughout: Dr. Bibin ENT Clinic. The section
+      formerly called "Vertigo & Balance Centre" is now "Vertigo and
+      Balance Care", which does not imply a separate establishment.
+  M2  The investigations section now distinguishes what is done during the
+      consultation from what is arranged by referral. "Cancer Screening"
+      is now "Assessment of suspicious lesions".
+      PLEASE CHECK BOTH AGAINST WHAT YOU ACTUALLY DO.
+  M3  An emergency notice sits above the appointment form, naming the
+      symptoms that need an emergency department and the number 108. The
+      form now says an enquiry is a request, not a confirmed booking.
+  M4  The two "coming soon" announcements are removed.
+  M5  Open, as under H4.
+  M6  CORRECTION TO MY AUDIT. I said the structured data needed tidying.
+      In fact the live page had no structured data at all, because the
+      snapshot reconstruction in August dropped it. I have written fresh
+      Physician and two MedicalClinic records containing only facts:
+      name, qualifications, registration, locations, telephone, languages,
+      memberships. No ratings, no awards, no procedure marketing.
+
+
+WHAT HAS NOT BEEN DONE
+----------------------
+  - Accessibility and performance testing (audit item L1). Worth doing
+    once you are happy with the content, so it is not done twice.
+  - The dead navigation and footer links (L2) and the map pin check (L3).
+  - Consultation days and hours, which the site still does not state
+    because I do not know them.
+
+
+HOW TO UPLOAD
+-------------
+  1. Replace the two placeholders everywhere first.
+  2. Open index.html locally and click through it, including the
+     questionnaire overlay, the call button and the WhatsApp button.
+  3. Cloudflare dashboard, Workers and Pages, your drbibinent project,
+     Create deployment, and drag in the CONTENTS of this folder, which
+     means the files and the eleven folders, not the zip and not the
+     enclosing folder.
+  4. Cloudflare keeps your previous deployment. If anything looks wrong,
+     roll back from the Deployments list.
+  5. Afterwards, resubmit https://drbibinent.com/sitemap.xml in Search
+     Console, since three new pages have been added.
+
+
+AND ONE THING THAT IS NOT ABOUT THE WEBSITE
+-------------------------------------------
+Please stop requesting Google reviews from patients, if any such requests
+are still going out. Paragraph 3.2 Explanation V prohibits requesting
+reviews, not only fake ones. I recommended the opposite earlier this year
+and that advice was wrong.
+
+
+NOTE ON THE REMOVED "ABOUT THIS INFORMATION" BLOCK
+---------------------------------------------------
+You asked for this block to be removed and it has been. Two consequences
+worth knowing, so the decision is an informed one:
+
+  1. Paragraph 7.2 of the guidelines requires artificial-intelligence
+     generated promotional content to carry a source mark stating that the
+     origin of the content is artificial intelligence. Whether patient
+     education pages on a practice website count as promotional is
+     genuinely arguable, and that argument is on the list for your lawyer.
+     Without the block, the site makes no such disclosure.
+
+  2. Your own content rules call for an author profile, a last reviewed
+     date and references on every medical page. The block was also the
+     clearest evidence that the pages are educational rather than
+     promotional, which is useful if that distinction is ever tested.
+
+On 11 October you also asked for the "Content preparation" lines to come off
+the three policy pages, and the "How this content is prepared" section on the
+medical disclaimer page. Those are gone too. The site now carries no
+artificial-intelligence disclosure anywhere.
+
+The registration number and council still sit in the footer of every page, so
+Explanation III is satisfied, and the policy pages keep their last-reviewed
+dates.
+
+If you removed the block because it was visually bulky rather than because
+you disagreed with its content, a single discreet line under each page
+heading would serve the same purpose. Say the word and I will add it.
+
+
+SECOND COMPLIANCE PASS — 11 OCTOBER
+-----------------------------------
+A second systematic sweep of all twelve pages removed the following, which
+the first pass had missed:
+
+  "Advanced" removed from the hero description of endoscopic surgery.
+
+  Outcome promises softened:
+    "Most patients improve dramatically within one to three sessions"
+    "Septoplasty corrects the obstruction permanently" (two places)
+    "In children this is usually curative" (snoring page)
+    "is curative in most children" (tonsil page)
+
+  Comparative treatment claims against conventional cautery reframed as
+  published findings with a statement that individual recovery varies:
+    "significantly less post-operative pain, minimal bleeding ... Children
+     especially tolerate it far better than traditional techniques"
+    "smaller access, less pain, quicker return to daily life"
+    "less pain, faster recovery" on the tonsillectomy card
+    "Gentle, low-temperature coblation"
+
+  Personal-achievement and third-party endorsement advertising removed from
+  the About section. The AVISA paragraph no longer describes the programme
+  as "fellowship-style", no longer mentions a "passing final examination",
+  no longer names the faculty, and no longer claims endorsement by the
+  Middle East Academy of Otolaryngology or the Italian Society of
+  Vestibology. It now states the programme name, the dates and its subject.
+  The courses paragraph is reduced to the same factual level.
+
+  "Call Now" changed to "Call the clinic".
+
+WHAT CANNOT BE FIXED BY REMOVING CONTENT
+----------------------------------------
+Three items are positive obligations or matters of judgement. Deleting
+content does not satisfy them:
+
+  1. Explanation III requires your name, qualifications, registration status
+     and register number to be disclosed. This needs your number, not an
+     edit. 34 placeholders remain.
+  2. Paragraph 7.2 requires an artificial-intelligence source mark on
+     AI-generated promotional content. You asked for that disclosure to be
+     taken off, so the site now has none.
+  3. Paragraph 7.6 brings in the data protection legislation. The privacy
+     page describes your real data flows, but the legal framing needs a
+     lawyer.
+
+Also outside the website: Instagram posts need the Explanation III
+disclosure, and patient reviews must not be requested.
+
+
+HEADING AND SCOPE-CLAIM CHANGES — 11 OCTOBER
+--------------------------------------------
+Hero heading is now "Ear, Nose, Throat and Balance Care".
+
+Comprehensiveness claims removed, since they assert a scope of capability
+that is not objectively verifiable:
+  "Comprehensive care for ear, nose, throat..."  (hero description)
+  "Comprehensive Surgical Care"                  (card title)
+  "Complete Ear, Nose & Throat Care"             (Conditions Treated heading)
+  "Comprehensive audio-vestibular workup"        (vertigo section card)
+  "continuity of care at every step"             (card text)
+  "From common infections to complex disorders"  (sub-heading)
+
+Ordinary clinical uses of the word complete were left alone, for example
+"complete excision of the pit and its entire tract" and "once healing is
+complete". Those describe surgery, not the practice.

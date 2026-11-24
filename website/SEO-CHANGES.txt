@@ -1,0 +1,52 @@
+SEO CORRECTIONS — 24 November 2026
+==================================
+Medical text was not changed. Only titles, descriptions, links, metadata and
+structured data were changed.
+
+ALL PAGES
+- Page language set to en-IN (English, India).
+- Sitemap lastmod dates updated to 2026-11-24.
+
+EIGHT PROCEDURE PAGES
+- Titles shortened to 60 characters or fewer, each with the topic and "Pala".
+  The old titles were cut off in Google results.
+- Meta descriptions shortened to 155 characters or fewer. The tonsil page
+  description no longer says "less pain and faster recovery", which was an
+  outcome claim.
+- og:site_name and og:locale added.
+- The doctor's portrait is no longer used as the social sharing image. This
+  matches item H5 in READ-THIS-FIRST, which the procedure pages had missed.
+  The card type is now "summary".
+- The MedicalProcedure structured data now links to the main Physician
+  record (@id https://drbibinent.com/#physician), so Google treats them as
+  the same doctor.
+
+HOMEPAGE
+- Title: "ENT Specialist in Pala, Kottayam | Dr. Bibin Baby".
+- New meta description that mentions Pala and Erattupetta.
+- H1: "Ear, Nose, Throat and Balance Care in Pala".
+- Business name changed from "Dr. Bibin ENT Clinic" to
+  "Dr. Bibin Baby – ENT Consultation" in the footer and og:site_name, so it
+  matches the Google Business Profile exactly.
+- Every Call and WhatsApp button now has its real tel: or wa.me link in the
+  HTML. Before, the links were filled in by JavaScript. The buttons now work
+  even without JavaScript, and Google can read them.
+- The "Questionnaires" links now point to #questionnaires instead of "#".
+  The pop-up overlay still opens as before.
+- Structured data:
+  - The Pala location is now a MedicalClinic named as on the Google Business
+    Profile.
+  - hasMap links to Google Maps were added for Pala and Erattupetta.
+  - sameAs links (Instagram, LinkedIn) were added.
+  - areaServed was added.
+  - A WebSite record was added.
+
+STILL TO DO BEFORE UPLOAD (cannot be done without you)
+1. Replace [[REGISTRATION-NUMBER]] and [[REGISTERING-COUNCIL]] everywhere.
+2. Add consultation days and hours for Pala and Erattupetta, the same as on
+   the Google Business Profile.
+3. Review three phrases that are outcome claims (medical text, left
+   unchanged):
+   - vertigo-balance: "can often be corrected in a single visit"
+   - vertigo-balance: "highly effective and often immediate"
+   - homepage FAQ: "no external cuts and faster recovery"
