@@ -2,7 +2,7 @@
 
 Ready to paste. Each has: hook line (topic + place, for Instagram search), body, sign-off, 5 hashtags, a location tag and alt text.
 
-**Rules (NMC Oct 2026):** no patient photos, scans, endoscopy clips, before/after images or testimonials. Use illustrations, the clinic or doctor-to-camera Reels.
+**Rules (NMC Oct 2026):** no patient photos, scans, endoscopy clips, before/after images or testimonials. Use illustrations, the consultation room or doctor-to-camera Reels.
 
 **How to post:** add location **Pala, Kerala** (Erattupetta for #20 and #33) · Advanced settings → *Write alt text* · post the same day as the Google post or any day you like.
 
@@ -12,7 +12,7 @@ Ready to paste. Each has: hook line (topic + place, for Instagram search), body,
 ```
 ENT specialist in Pala 👂👃🗣️
 
-Dr. Bibin Baby (MBBS, MS ENT, DNB ENT) sees adults and children for ear, nose, throat, hearing and balance problems at our clinic opposite Lalam Church Road, Pala, and at Sunrise Hospital, Erattupetta. Please call to check consultation timings.
+Dr. Bibin Baby (MBBS, MS ENT, DNB ENT) sees adults and children for ear, nose, throat, hearing and balance problems at Pala, opposite Lalam Church Road, and at Sunrise Hospital, Erattupetta. Please call to check consultation timings.
 
 📍 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala | Also at Sunrise Hospital, Erattupetta
 📞 Call or WhatsApp 96455 64883 (link in bio)
@@ -21,7 +21,7 @@ General health information, not a substitute for a medical consultation.
 
 #ENTPala #KottayamDoctor #ENTKerala #ENTSpecialist #PalaKerala
 ```
-**Alt text:** Dr. Bibin Baby's ENT clinic in Pala
+**Alt text:** Dr. Bibin Baby's ENT consultation room in Pala
 
 ## 2. Cold that won't go away?  
 *Google post date: Fri 27 Nov 2026 · Location tag: Pala, Kerala*
@@ -199,7 +199,7 @@ General health information, not a substitute for a medical consultation.
 ```
 Christmas holiday timings 🎄
 
-Clinic timings may change during the Christmas and New Year holidays. Please call +91 96455 64883 before visiting.
+Consultation timings may change during the Christmas and New Year holidays. Please call +91 96455 64883 before visiting.
 
 📍 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala | Also at Sunrise Hospital, Erattupetta
 📞 Call or WhatsApp 96455 64883 (link in bio)
@@ -208,7 +208,7 @@ General health information, not a substitute for a medical consultation.
 
 #ENTPala #KottayamDoctor #ENTKerala #PalaKerala
 ```
-**Alt text:** Christmas star with clinic name
+**Alt text:** Christmas star with the practice name
 
 ## 13. Hoarse after carol singing?  
 *Google post date: Wed 23 Dec 2026 · Location tag: Pala, Kerala*
@@ -233,7 +233,7 @@ General health information, not a substitute for a medical consultation.
 ```
 Merry Christmas from Pala 🎄
 
-Wishing everyone in Pala, Erattupetta and nearby areas a safe and healthy Christmas. During the holidays, please call before visiting the clinic.
+Wishing everyone in Pala, Erattupetta and nearby areas a safe and healthy Christmas. During the holidays, please call before visiting.
 
 📍 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala | Also at Sunrise Hospital, Erattupetta
 📞 Call or WhatsApp 96455 64883 (link in bio)
@@ -522,7 +522,7 @@ General health information, not a substitute for a medical consultation.
 ```
 ENT care near Uzhavoor & Kidangoor 📍
 
-Ear pain, blocked nose, sinus trouble, hearing changes, dizziness or a child who snores: these are common reasons families from Uzhavoor, Kidangoor and nearby villages visit an ENT doctor. Dr. Bibin Baby (MS ENT, DNB ENT) sees adults and children at the Pala clinic, opposite Lalam Church Road. Patient parking is available near the clinic. Please call ahead to check consultation timings.
+Ear pain, blocked nose, sinus trouble, hearing changes, dizziness or a child who snores: these are common reasons families from Uzhavoor, Kidangoor and nearby villages visit an ENT doctor. Dr. Bibin Baby (MS ENT, DNB ENT) sees adults and children at Pala, opposite Lalam Church Road. Patient parking is available nearby. Please call ahead to check consultation timings.
 
 📍 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala | Also at Sunrise Hospital, Erattupetta
 📞 Call or WhatsApp 96455 64883 (link in bio)
@@ -531,7 +531,7 @@ General health information, not a substitute for a medical consultation.
 
 #ENTPala #KottayamDoctor #ENTKerala #Uzhavoor #Kidangoor
 ```
-**Alt text:** ENT clinic in Pala
+**Alt text:** ENT consultation room in Pala
 
 ## 32. Vertigo and dizziness: for patients from Kuravilangad  
 *Google post date: Fri 05 Feb 2027 · Location tag: Pala, Kerala*
@@ -539,7 +539,7 @@ General health information, not a substitute for a medical consultation.
 ```
 Vertigo care near Kuravilangad 🌀
 
-Spinning when you turn in bed, unsteadiness while walking, or repeated dizzy spells can often be traced to the inner ear. Patients from Kuravilangad, Kadaplamattom and nearby areas can consult Dr. Bibin Baby at the Pala clinic for evaluation of vertigo and balance problems. Sudden dizziness with weakness, slurred speech or a drooping face is an emergency: go to the nearest hospital immediately.
+Spinning when you turn in bed, unsteadiness while walking, or repeated dizzy spells can often be traced to the inner ear. Patients from Kuravilangad, Kadaplamattom and nearby areas can consult Dr. Bibin Baby at Pala for evaluation of vertigo and balance problems. Sudden dizziness with weakness, slurred speech or a drooping face is an emergency: go to the nearest hospital immediately.
 
 📍 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala | Also at Sunrise Hospital, Erattupetta
 📞 Call or WhatsApp 96455 64883 (link in bio)
@@ -556,7 +556,7 @@ General health information, not a substitute for a medical consultation.
 ```
 Children's ENT near Kanjirappally 👧
 
-Frequent ear infections, mouth breathing, snoring or repeated sore throats in children are worth an ENT check. Families from Kanjirappally, Poonjar, Teekoy and the Erattupetta side can consult Dr. Bibin Baby at Sunrise Hospital, Erattupetta, or at the Pala clinic. Please call for consultation days and timings.
+Frequent ear infections, mouth breathing, snoring or repeated sore throats in children are worth an ENT check. Families from Kanjirappally, Poonjar, Teekoy and the Erattupetta side can consult Dr. Bibin Baby at Sunrise Hospital, Erattupetta, or at Pala. Please call for consultation days and timings.
 
 📍 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala | Also at Sunrise Hospital, Erattupetta
 📞 Call or WhatsApp 96455 64883 (link in bio)

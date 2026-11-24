@@ -1,15 +1,13 @@
 # Google Business Profile posts – copy & paste
 
-Post each on the date shown: Business Profile → Add update → paste the text → choose the button → Post.
+Post each on the date shown: Business Profile → Add update → paste the text → Post.
 
 ## 1. Wed 25 Nov 2026, 10:00 am
-
-**Button:** Call now
 
 ```
 Ear, nose & throat care in Pala
 
-Dr. Bibin Baby (MBBS, MS ENT, DNB ENT) sees adults and children for ear, nose, throat, hearing and balance problems at our clinic opposite Lalam Church Road, Pala, and at Sunrise Hospital, Erattupetta. Please call to check consultation timings.
+Dr. Bibin Baby (MBBS, MS ENT, DNB ENT) sees adults and children for ear, nose, throat, hearing and balance problems at Pala, opposite Lalam Church Road, and at Sunrise Hospital, Erattupetta. Please call to check consultation timings.
 
 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
 
@@ -17,8 +15,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 2. Fri 27 Nov 2026, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/sinus-surgery-fess/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_sinusitis
 
 ```
 Cold that won't go away?
@@ -32,8 +28,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 3. Mon 30 Nov 2026, 10:00 am
 
-**Button:** Learn more → https://drbibinent.com/vertigo-balance/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_bppv
-
 ```
 Room spinning when you turn in bed?
 
@@ -45,8 +39,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 4. Wed 02 Dec 2026, 10:00 am
-
-**Button:** Call now
 
 ```
 Dust allergy while cleaning for Christmas?
@@ -60,8 +52,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 5. Fri 04 Dec 2026, 10:00 am
 
-**Button:** Call now
-
 ```
 Should I clean my ears with buds?
 
@@ -73,8 +63,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 6. Mon 07 Dec 2026, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/pediatric-ent/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_mouth_breathing
 
 ```
 Is your child breathing through the mouth?
@@ -88,8 +76,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 7. Wed 09 Dec 2026, 10:00 am
 
-**Button:** Learn more → https://drbibinent.com/voice-swallowing/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_teacher_voice
-
 ```
 Teachers: protect your voice during exam season
 
@@ -101,8 +87,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 8. Fri 11 Dec 2026, 10:00 am
-
-**Button:** Call now
 
 ```
 Noticing the TV getting louder?
@@ -116,8 +100,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 9. Mon 14 Dec 2026, 10:00 am
 
-**Button:** Learn more → https://drbibinent.com/snoring-sleep-apnoea/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_snoring
-
 ```
 Snoring loudly every night?
 
@@ -129,8 +111,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 10. Wed 16 Dec 2026, 10:00 am
-
-**Button:** Call now
 
 ```
 Travelling for Christmas? Ear pain on flights
@@ -144,8 +124,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 11. Fri 18 Dec 2026, 10:00 am
 
-**Button:** Call now
-
 ```
 Sudden hearing loss in one ear is urgent
 
@@ -158,12 +136,10 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 12. Mon 21 Dec 2026, 10:00 am
 
-**Button:** Call now
-
 ```
 Christmas holiday timings
 
-Clinic timings may change during the Christmas and New Year holidays. Please call +91 96455 64883 before visiting.
+Consultation timings may change during the Christmas and New Year holidays. Please call +91 96455 64883 before visiting.
 
 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
 
@@ -171,8 +147,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 13. Wed 23 Dec 2026, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/voice-swallowing/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_carol_voice
 
 ```
 Hoarse after carol singing?
@@ -186,12 +160,10 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 14. Thu 24 Dec 2026, 10:00 am
 
-**Button:** Call now
-
 ```
 Season's greetings
 
-Wishing everyone in Pala, Erattupetta and nearby areas a safe and healthy Christmas. During the holidays, please call before visiting the clinic.
+Wishing everyone in Pala, Erattupetta and nearby areas a safe and healthy Christmas. During the holidays, please call before visiting.
 
 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
 
@@ -199,8 +171,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 15. Mon 28 Dec 2026, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/pediatric-ent/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_child_ear_pain
 
 ```
 Ear pain in children: what to do
@@ -214,8 +184,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 16. Wed 30 Dec 2026, 10:00 am
 
-**Button:** Call now
-
 ```
 Nosebleed first aid
 
@@ -227,8 +195,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 17. Sat 02 Jan 2027, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_new_year
 
 ```
 New year, healthy ears, nose & throat
@@ -242,8 +208,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 18. Mon 04 Jan 2027, 10:00 am
 
-**Button:** Call now
-
 ```
 What happens at an ENT consultation?
 
@@ -255,8 +219,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 19. Wed 06 Jan 2027, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/vertigo-balance/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_vertigo_tablets
 
 ```
 Are vertigo tablets enough?
@@ -270,8 +232,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 20. Fri 08 Jan 2027, 10:00 am
 
-**Button:** Call now
-
 ```
 Consultations at Sunrise Hospital, Erattupetta
 
@@ -283,8 +243,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 21. Mon 11 Jan 2027, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/septoplasty-deviated-septum/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_septum
 
 ```
 Deviated septum: does everyone need surgery?
@@ -298,8 +256,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 22. Wed 13 Jan 2027, 10:00 am
 
-**Button:** Call now
-
 ```
 Earphones and young ears
 
@@ -311,8 +267,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 23. Fri 15 Jan 2027, 10:00 am
-
-**Button:** Call now
 
 ```
 Coin, bead or battery in a child's nose or ear?
@@ -326,8 +280,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 24. Mon 18 Jan 2027, 10:00 am
 
-**Button:** Learn more → https://drbibinent.com/tonsil-adenoid-surgery/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_child_snoring
-
 ```
 Child snoring isn't always 'cute'
 
@@ -339,8 +291,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 25. Wed 20 Jan 2027, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/vertigo-balance/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_falls
 
 ```
 Dizziness in older adults: preventing falls
@@ -354,8 +304,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 26. Fri 22 Jan 2027, 10:00 am
 
-**Button:** Call now
-
 ```
 Sore throat: virus or something more?
 
@@ -367,8 +315,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 27. Mon 25 Jan 2027, 10:00 am
-
-**Button:** Call now
 
 ```
 Ringing in the ears (tinnitus)
@@ -382,8 +328,6 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 28. Wed 27 Jan 2027, 10:00 am
 
-**Button:** Learn more → https://drbibinent.com/sinus-surgery-fess/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_fess
-
 ```
 When is sinus surgery (FESS) considered?
 
@@ -395,8 +339,6 @@ This post is general health information, not a substitute for a medical consulta
 ```
 
 ## 29. Fri 29 Jan 2027, 10:00 am
-
-**Button:** Learn more → https://drbibinent.com/pediatric-ent/?utm_source=google&utm_medium=organic&utm_campaign=gbp_post_newborn_hearing
 
 ```
 Newborn hearing screening
@@ -410,12 +352,46 @@ This post is general health information, not a substitute for a medical consulta
 
 ## 30. Mon 01 Feb 2027, 10:00 am
 
-**Button:** Call now
-
 ```
 Can allergy cause blocked ears?
 
 Nasal allergy and colds can affect the Eustachian tube, which connects the nose and ear, causing a blocked or popping ear. Treating the nose often helps the ear.
+
+Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
+
+This post is general health information, not a substitute for a medical consultation.
+```
+
+## 31. Wed 03 Feb 2027, 10:00 am
+
+```
+ENT care for families in Uzhavoor and Kidangoor
+
+Ear pain, blocked nose, sinus trouble, hearing changes, dizziness or a child who snores: these are common reasons families from Uzhavoor, Kidangoor and nearby villages visit an ENT doctor. Dr. Bibin Baby (MS ENT, DNB ENT) sees adults and children at Pala, opposite Lalam Church Road. Patient parking is available nearby. Please call ahead to check consultation timings.
+
+Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
+
+This post is general health information, not a substitute for a medical consultation.
+```
+
+## 32. Fri 05 Feb 2027, 10:00 am
+
+```
+Vertigo and dizziness: for patients from Kuravilangad
+
+Spinning when you turn in bed, unsteadiness while walking, or repeated dizzy spells can often be traced to the inner ear. Patients from Kuravilangad, Kadaplamattom and nearby areas can consult Dr. Bibin Baby at Pala for evaluation of vertigo and balance problems. Sudden dizziness with weakness, slurred speech or a drooping face is an emergency: go to the nearest hospital immediately.
+
+Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
+
+This post is general health information, not a substitute for a medical consultation.
+```
+
+## 33. Mon 08 Feb 2027, 10:00 am
+
+```
+Children's ENT care for Kanjirappally and Erattupetta side
+
+Frequent ear infections, mouth breathing, snoring or repeated sore throats in children are worth an ENT check. Families from Kanjirappally, Poonjar, Teekoy and the Erattupetta side can consult Dr. Bibin Baby at Sunrise Hospital, Erattupetta, or at Pala. Please call for consultation days and timings.
 
 Dr. Bibin Baby – ENT Consultation, opposite Lalam Church Road, Pala · Also at Sunrise Hospital, Erattupetta · +91 96455 64883
 
