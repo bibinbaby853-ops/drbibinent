@@ -112,3 +112,20 @@ PLACE DE-EMPHASISED (24 Nov, at your request)
 - Homepage H1: "ENT Surgery and Vertigo Care".
 - The address is still in the Locations section, the footer and the
   structured data. Google Maps and the Google Business Profile still need it.
+
+FINAL TARGETING: ALL OF KERALA (24 Nov, replaces the two notes above)
+Aim: leads from anywhere in Kerala, without stressing Pala.
+- Every page title and meta description names Kerala. None names Pala,
+  Kottayam or Erattupetta. Examples:
+  "ENT Surgery & Vertigo Care in Kerala | Dr. Bibin Baby"
+  "Vertigo & Dizziness Treatment in Kerala | Dr. Bibin Baby"
+  Descriptions end with "for patients across Kerala".
+- Homepage H1: "ENT Surgery and Vertigo Care in Kerala".
+- The hero text ends with "Patients from anywhere in Kerala can book a
+  consultation."
+- Travelling block: the heading is now "Coming from another district of Kerala
+  or from abroad?". It now says such patients "are welcome". The earlier
+  wording claimed that patients already come from other districts, which had
+  not been confirmed.
+- Pala and Erattupetta appear only where patients need them: the Locations
+  section, the footer and the structured data (address, map links).
