@@ -129,3 +129,24 @@ Aim: leads from anywhere in Kerala, without stressing Pala.
   not been confirmed.
 - Pala and Erattupetta appear only where patients need them: the Locations
   section, the footer and the structured data (address, map links).
+
+FINAL (24 Nov): NO PLACE STRESSED ON THE WEBSITE; KERALA-WIDE TARGETING KEPT
+- Page titles, meta descriptions and the homepage H1 name no place. They
+  lead with the treatment and "Dr. Bibin Baby, ENT Surgeon".
+  Homepage title: "Dr. Bibin Baby | ENT Surgeon, Vertigo & Balance Care".
+  Homepage H1: "ENT Surgery and Vertigo Care".
+- Hero: the sentence "Patients from anywhere in Kerala can book a
+  consultation." has been removed.
+- Travel block, now place-neutral:
+  - Heading: "Travelling for your consultation?"
+  - Text: "Patients travelling from other districts, or from abroad while home
+    on leave, are welcome."
+- Place names remain only where patients need them:
+  - the Locations addresses and maps
+  - the booking note
+  - the footer
+  - the medical college name
+  - the KSMC registration
+- Kerala targeting is kept out of sight. The structured data (which Google
+  reads but visitors do not see) still sets areaServed to Kerala and India,
+  and the clinic addresses are in Kerala.
