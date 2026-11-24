@@ -42,7 +42,8 @@ HOMEPAGE
   - A WebSite record was added.
 
 STILL TO DO BEFORE UPLOAD (cannot be done without you)
-1. Replace [[REGISTRATION-NUMBER]] and [[REGISTERING-COUNCIL]] everywhere.
+1. DONE 24 Nov: registration filled in everywhere (34 places, including
+   structured data): 66908, Kerala State Medical Council (KSMC).
 2. Add consultation days and hours for Pala and Erattupetta, the same as on
    the Google Business Profile.
 
