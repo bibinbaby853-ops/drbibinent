@@ -56,3 +56,11 @@ OUTCOME WORDING TONED DOWN (24 Nov, at your request)
 - homepage FAQ: "no external cuts and faster recovery" -> "usually done
   endoscopically through the nostrils, without cuts on the face. Recovery
   varies between patients."
+- vertigo-balance FAQ (page and structured data): "often resolving within
+  one or two visits" -> "How quickly it settles varies between patients, and
+  some need more than one session."
+- vertigo-balance BPPV card: "frequently resolving in one or two visits" ->
+  "how quickly it settles varies between patients."
+- vertigo-balance Malayalam box: "പലപ്പോഴും ഒന്നോ രണ്ടോ സന്ദർശനത്തിൽ ഭേദമാകും"
+  -> "എത്ര വേഗം ഭേദമാകുമെന്നത് ഓരോ രോഗിയിലും വ്യത്യസ്തമാണ്."
+  (please have a native speaker check the Malayalam)
