@@ -45,8 +45,14 @@ STILL TO DO BEFORE UPLOAD (cannot be done without you)
 1. Replace [[REGISTRATION-NUMBER]] and [[REGISTERING-COUNCIL]] everywhere.
 2. Add consultation days and hours for Pala and Erattupetta, the same as on
    the Google Business Profile.
-3. Review three phrases that are outcome claims (medical text, left
-   unchanged):
-   - vertigo-balance: "can often be corrected in a single visit"
-   - vertigo-balance: "highly effective and often immediate"
-   - homepage FAQ: "no external cuts and faster recovery"
+
+OUTCOME WORDING TONED DOWN (24 Nov, at your request)
+- vertigo-balance hero: "can often be corrected in a single visit" ->
+  "is treated in the clinic with repositioning manoeuvres; how quickly it
+  settles varies between patients."
+- vertigo-balance treatment list: "highly effective and often immediate" ->
+  "the standard treatment recommended in clinical guidelines; some patients
+  need more than one session"
+- homepage FAQ: "no external cuts and faster recovery" -> "usually done
+  endoscopically through the nostrils, without cuts on the face. Recovery
+  varies between patients."
