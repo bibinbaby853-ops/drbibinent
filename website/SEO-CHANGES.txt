@@ -64,3 +64,15 @@ OUTCOME WORDING TONED DOWN (24 Nov, at your request)
 - vertigo-balance Malayalam box: "പലപ്പോഴും ഒന്നോ രണ്ടോ സന്ദർശനത്തിൽ ഭേദമാകും"
   -> "എത്ര വേഗം ഭേദമാകുമെന്നത് ഓരോ രോഗിയിലും വ്യത്യസ്തമാണ്."
   (please have a native speaker check the Malayalam)
+
+KERALA-WIDE TARGETING (24 Nov)
+- All titles and descriptions now name Kerala, not only Pala. Examples:
+  "ENT Surgeon & Vertigo Care in Kerala | Dr. Bibin Baby",
+  "Vertigo & Dizziness Treatment in Kerala | Dr. Bibin Baby".
+- Homepage H1: "Ear, Nose, Throat and Balance Care in Pala, Kerala".
+- Structured data: areaServed changed to Kerala (State) and India (Country).
+- New block under Locations: "Travelling from elsewhere in Kerala or from
+  abroad". It covers calling ahead, bringing reports (including reports from
+  abroad) and sharing travel dates. There is no online-consultation claim.
+- "Vertigo specialist" is not used, because it is not a recognised
+  qualification. The wording is "vertigo care" or "vertigo treatment" instead.
