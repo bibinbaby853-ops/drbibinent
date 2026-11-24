@@ -150,3 +150,18 @@ FINAL (24 Nov): NO PLACE STRESSED ON THE WEBSITE; KERALA-WIDE TARGETING KEPT
 - Kerala targeting is kept out of sight. The structured data (which Google
   reads but visitors do not see) still sets areaServed to Kerala and India,
   and the clinic addresses are in Kerala.
+
+NO "CLINIC" WORDING; NO SEPARATE VERTIGO BOOKING (24 Nov, published)
+- The consultation is not registered as a clinic, so the word "clinic" has
+  been removed everywhere. "Clinical" (a medical adjective) stays.
+  - Buttons: "Call the clinic" / "Call clinic" are now "Call for appointment".
+    "WhatsApp the Clinic" is now "WhatsApp for appointment".
+  - "in the clinic" is now "during the consultation" or "at a review visit".
+  - "Clinic Locations" is now "Where to Consult".
+  - The policy pages refer to "the doctor".
+  - Structured data: the Pala location is a Place named
+    "Dr. Bibin Baby – ENT Consultation, Pala", not a MedicalClinic. Sunrise
+    is marked as a Hospital.
+- The separate "Book a Vertigo Consultation" button has been removed.
+- The same "clinic" wording was removed from the 6 scheduled Google posts in
+  Metricool that contained it.
