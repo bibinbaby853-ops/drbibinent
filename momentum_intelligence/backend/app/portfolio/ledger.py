@@ -122,20 +122,39 @@ class Ledger:
         return pnl
 
     def adjust_for_corporate_action(self, stock_id: int, factor: float) -> list[str]:
-        """Split/bonus: prices x factor, quantity / factor (rounded down; NSE pays fractions in cash, ignored here)."""
+        """Split/bonus: prices x factor, quantity / factor.
+
+        A fractional entitlement (e.g. a 3:2 bonus on an odd holding) is settled as cash in lieu at the
+        adjusted last price, booked as a sale of the fraction so cost basis, cash and realised P&L stay
+        consistent (``reconcile``). Positions left with no whole share are closed the same way.
+        """
         touched = []
-        for p in self.positions.values():
-            if p.stock_id == stock_id:
-                new_qty = int(p.qty / factor + 1e-9)
-                p.entry_qty = int(p.entry_qty / factor + 1e-9)
-                p.qty = new_qty
-                for attr in ("avg_price", "initial_stop", "stop", "highest_close"):
-                    setattr(p, attr, getattr(p, attr) * factor)
-                if p.target is not None:
-                    p.target *= factor
-                if p.mark is not None:
-                    p.mark *= factor
-                touched.append(p.key)
+        for p in list(self.positions.values()):
+            if p.stock_id != stock_id:
+                continue
+            exact = p.qty / factor
+            new_qty = int(exact + 1e-9)
+            frac = exact - new_qty
+            p.entry_qty = max(1, int(p.entry_qty / factor + 1e-9))
+            for attr in ("avg_price", "initial_stop", "stop", "highest_close"):
+                setattr(p, attr, getattr(p, attr) * factor)
+            if p.target is not None:
+                p.target *= factor
+            if p.mark is not None:
+                p.mark *= factor
+            if frac > 1e-9:
+                price = p.mark if p.mark is not None else p.avg_price
+                proceeds = frac * price
+                allocated = p.buy_charges * frac / exact
+                self.cash += proceeds
+                self.gross_sold += proceeds
+                # its cost basis leaves the book through (bought - still held) in ``reconcile``
+                self.realised_pnl += (price - p.avg_price) * frac - allocated
+                p.buy_charges -= allocated
+            p.qty = new_qty
+            touched.append(p.key)
+            if p.qty == 0:
+                del self.positions[p.key]
         return touched
 
     def reconcile(self, tolerance: float = 0.01) -> dict:

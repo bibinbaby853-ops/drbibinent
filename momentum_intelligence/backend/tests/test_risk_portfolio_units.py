@@ -184,3 +184,19 @@ def test_no_trailing_before_threshold_and_time_stop():
     r = after_close(p, close=110, atr=3.0, sessions_held=10, cfg=ExitConfig())  # +1R < 1.5R
     assert r["new_stop"] is None and not r["time_exit"]
     assert after_close(p, close=101, atr=3.0, sessions_held=40, cfg=ExitConfig())["time_exit"]
+
+
+
+def test_fractional_bonus_entitlement_is_paid_in_cash_and_books_reconcile():
+    L = Ledger.new(100_000)
+    L.buy(pos(qty=101, stop=90), 100.0, 11.0)
+    L.mark({1: 105.0})
+    L.adjust_for_corporate_action(1, 0.4)            # 3:2 bonus: 101 / 0.4 = 252.5 shares
+    p = L.positions["A"]
+    assert p.qty == 252 and p.avg_price == pytest.approx(40.0) and p.mark == pytest.approx(42.0)
+    assert L.cash == pytest.approx(100_000 - 10_100 - 11 + 0.5 * 42.0)        # half a share paid at the adjusted price
+    assert L.realised_pnl == pytest.approx((42.0 - 40.0) * 0.5 - 11 * 0.5 / 252.5)
+    assert L.reconcile()["ok"]
+    assert L.equity == pytest.approx(100_000 - 11 + 101 * 5)                   # value-neutral apart from the gain
+    L.sell("A", 252, 42.0, 0.0)
+    assert L.reconcile()["ok"]
