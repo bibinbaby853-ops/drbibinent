@@ -6,6 +6,7 @@ and the reasons it is not. Only information available at d is used:
 * liquidity: median daily traded value over the last N exchange sessions
   ending d; a session the stock did not trade counts as zero (conservative)
 * history: number of sessions the stock has traded up to d
+* instrument: company shares only (ISIN INE...); ETFs (INF...) trade in EQ too but are excluded
 * series: EQ by default (BE / BZ are trade-to-trade or non-compliant segments)
 * data quality: no blocking issue for the stock in the last M sessions, and no
   market-wide data gap in that window
@@ -36,6 +37,7 @@ from ..config import StrategyConfig
 from ..models import TradingSession, UniverseSnapshot
 
 REASONS = {
+    "not_equity": "not company shares (ETF or other instrument)",
     "series": "series not eligible (trade-to-trade or non-compliant segment)",
     "illiquid": "median traded value below the minimum",
     "insufficient_history": "fewer traded sessions than required",
@@ -88,6 +90,8 @@ def evaluate(cfg: StrategyConfig, today: pd.DataFrame, values: pd.DataFrame, his
     reasons = []
     for r in out.itertuples(index=False):
         why = []
+        if getattr(r, "kind", "equity") != "equity":
+            why.append("not_equity")
         if r.series not in rules.eligible_series:
             why.append("series")
         if r.median_value_cr < cfg.min_median_traded_value_cr:
@@ -109,7 +113,7 @@ def evaluate(cfg: StrategyConfig, today: pd.DataFrame, values: pd.DataFrame, his
 
 
 _TODAY = text("""
-    select c.stock_id, s.symbol, c.series, coalesce(s.sector, :unclassified) as sector, c.close
+    select c.stock_id, s.symbol, s.kind, c.series, coalesce(s.sector, :unclassified) as sector, c.close
     from market_candles c join stocks s on s.id = c.stock_id
     where c.session_date = :d and c.interval = '1d' and c.is_adjusted = false and c.source = :source
 """)
@@ -120,7 +124,6 @@ _VALUES = text("""
 _HISTORY = text("""
     select stock_id, count(*) as n from market_candles
     where session_date <= :d and interval = '1d' and is_adjusted = false and source = :source
-      and stock_id = any(cast(:ids as integer[]))
     group by stock_id
 """)
 _BLOCKED = text("""
@@ -154,7 +157,8 @@ def build_snapshot(db: Session, d: date, cfg: StrategyConfig, *, source: str = "
     q_window = sessions_upto(db, d, rules.quality_lookback_sessions, source)
     ca_window = sessions_upto(db, d, rules.corporate_action_quarantine_sessions + 1, source)
     values = pd.read_sql(_VALUES, conn, params={"start": liq_window[0], "d": d, "source": source})
-    hist = pd.read_sql(_HISTORY, conn, params={"d": d, "source": source, "ids": today["stock_id"].tolist()})
+    # counted for all stocks then filtered: much faster than an ANY(<3,000 ids>) predicate
+    hist = pd.read_sql(_HISTORY, conn, params={"d": d, "source": source})
     history = hist.set_index("stock_id")["n"]
     blocked = {r[0] for r in db.execute(_BLOCKED, {"start": q_window[0], "d": d})}
     market_gap = db.execute(_MARKET_GAP, {"start": q_window[0], "d": d, "src": f"{source}%"}).scalar_one() > 0
@@ -170,8 +174,7 @@ def build_snapshot(db: Session, d: date, cfg: StrategyConfig, *, source: str = "
              "symbol": r.symbol, "series": r.series, "sector": r.sector, "close": float(r.close),
              "median_value_cr": float(r.median_value_cr), "history_sessions": int(r.history_sessions),
              "config_hash": h, "source": source, "demo": source == "demo"} for r in snap.itertuples(index=False)]
-    for i in range(0, len(rows), 2000):
-        db.execute(insert(UniverseSnapshot).values(rows[i:i + 2000]))
+    db.execute(insert(UniverseSnapshot), rows)  # executemany: compiled once
     db.flush()
     counts: dict[str, int] = {}
     for why in snap["reasons"]:

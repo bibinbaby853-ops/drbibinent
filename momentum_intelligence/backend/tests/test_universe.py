@@ -55,6 +55,8 @@ def test_each_exclusion_reason():
     assert out.loc[5].reasons == ["unconfirmed_corporate_action"]
     assert out.loc[6].reasons == ["surveillance_gsm"]
     assert run(market_gap=True).loc[1].reasons == ["market_data_gap"]
+    etf = today((7, "GOLDETF", "EQ", "Unclassified", 60.0)).assign(kind="etf")
+    assert run(t=etf, v=values(7, 10), history=pd.Series({7: 500})).loc[7].reasons == ["not_equity"]
 
 
 def test_rules_are_configurable():

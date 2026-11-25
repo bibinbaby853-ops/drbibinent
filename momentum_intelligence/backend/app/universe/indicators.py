@@ -49,7 +49,6 @@ def compute_for_session(db: Session, d: date, stock_ids: list[int], *, source: s
                                                    IndicatorSnapshot.version == INDICATOR_VERSION))
         rows = [{"session_date": d, "stock_id": sid, "version": INDICATOR_VERSION, "values": v, "source": source}
                 for sid, v in out.items()]
-        for i in range(0, len(rows), 1000):
-            db.execute(insert(IndicatorSnapshot).values(rows[i:i + 1000]))
+        db.execute(insert(IndicatorSnapshot), rows)
         db.flush()
     return out

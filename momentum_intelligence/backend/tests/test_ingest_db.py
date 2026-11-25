@@ -218,3 +218,13 @@ def test_market_wide_prev_close_gap_is_a_calendar_problem_not_corporate_actions(
         assert out["factors_new"] == 0 and out["market_wide_gap_dates"] == [mon.isoformat()]
         assert count(db, DataQualityIssue, DataQualityIssue.check == "market_wide_prev_close_gap",
                      DataQualityIssue.severity == "blocking") == 1
+
+
+def test_etfs_are_stored_as_etf_not_equity(tmp_path):
+    rows = [bar("ALPHA", "INE000A01011", 100, 102, 99, 101, 100, 1000), bar("GOLDX", "INF000X01011", 60, 61, 59, 60, 60, 1000)]
+    files = {n.udiff_url(D1): zipped("a.csv", udiff_csv(D1, rows)), n.udiff_url(D2): zipped("b.csv", udiff_csv(D2, rows))}
+    p = n.NSEArchiveProvider(tmp_path, http=FakeHttp(files))
+    ingest_range(session_scope, p, D1, D2)
+    with session_scope() as db:
+        kinds = dict(db.execute(select(Stock.symbol, Stock.kind)).all())
+        assert kinds == {"ALPHA": "equity", "GOLDX": "etf"} and count(db, Stock) == 2  # not re-created on day 2

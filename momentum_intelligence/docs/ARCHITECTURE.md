@@ -179,6 +179,7 @@ Implemented in `app/market_data/validation.py` (Phase 2):
 | Unexplained jump (> 25%, no corporate-action factor) | warning | reported |
 | NSE versus Yahoo close beyond 0.5% | warning | reported (`reconcile`) |
 | File for a different session than requested (holiday placeholder) | - | file rejected and evicted from cache |
+| Unreadable file (an Excel workbook under a .csv name is read as Excel) | - | delivery file: skipped with a note; bhavcopy: session reported as failed |
 | Corporate action inferred from a price gap / disagreement with Yahoo | warning | reported; disagreement stops the factor being applied |
 
 Incomplete bars are never stored: a daily bar only after 15:30 IST, an
@@ -249,6 +250,7 @@ data available at d only, one row per stock that traded on d:
 
 | Rule | Default | Reason code |
 |---|---|---|
+| Instrument | company shares only: ISIN `INE...`; ETFs (`INF...`) also trade in EQ and are stored as `etf` | `not_equity` |
 | Series | EQ only (BE trade-to-trade and BZ excluded) | `series` |
 | Liquidity | median daily traded value over the last 20 exchange sessions >= Rs 5 Cr; untraded sessions count as zero | `illiquid` |
 | History | >= 100 traded sessions | `insufficient_history` |

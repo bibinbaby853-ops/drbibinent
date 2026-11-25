@@ -34,6 +34,16 @@ from .validation import Issue, blocking_mask, check_session, summarise
 
 log = logging.getLogger(__name__)
 
+# ISIN issuer-type prefix: INE = company shares, INF = mutual-fund units (ETFs trade in the EQ series too).
+SECURITY_KINDS = ("equity", "etf", "other")
+
+
+def security_kind(isin: str | None) -> str:
+    if not isin:
+        return "other"
+    return {"INE": "equity", "INF": "etf"}.get(isin[:3], "other")
+
+
 MARKET_WIDE_MIN = 25      # at least this many stocks ...
 MARKET_WIDE_SHARE = 0.05  # ... or 5% of the session's stocks with a "factor" on one date = calendar problem
 
@@ -87,7 +97,7 @@ def resolve_stocks(db: Session, bars: pd.DataFrame, d: date, *, source: str, dem
     """
     counters = {"new": 0, "symbol_change": 0, "isin_change": 0}
     keys = {_stock_key(r, demo): r for r in bars.to_dict("records")}
-    existing = {s.key: s for s in db.scalars(select(Stock).where(Stock.demo == demo, Stock.kind == "equity"))}
+    existing = {s.key: s for s in db.scalars(select(Stock).where(Stock.demo == demo, Stock.kind.in_(SECURITY_KINDS)))}
     by_symbol = {s.symbol: s for s in existing.values()}
     by_id = {s.id: s for s in existing.values()}
     past_isin = {} if demo else {h.isin: by_id.get(h.stock_id) for h in db.execute(
@@ -113,12 +123,14 @@ def resolve_stocks(db: Session, bars: pd.DataFrame, d: date, *, source: str, dem
             if cand is not None and cand.key not in today_keys and cand.last_seen is not None and cand.last_seen < d:
                 existing.pop(cand.key, None)
                 cand.key, cand.isin, cand.symbol = key, r["isin"], r["symbol"]
+                cand.kind = security_kind(r["isin"])
                 existing[key] = cand
                 stock = cand
                 counters["isin_change"] += 1
                 history(stock, "isin_change")
         if stock is None:
-            stock = Stock(key=key, isin=None if demo else r["isin"], symbol=r["symbol"], series=r["series"], kind="equity",
+            stock = Stock(key=key, isin=None if demo else r["isin"], symbol=r["symbol"], series=r["series"],
+                          kind="equity" if demo else security_kind(r["isin"]),
                           status="active", first_seen=d, last_seen=d, demo=demo)
             db.add(stock)
             created.append(stock)
