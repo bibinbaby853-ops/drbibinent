@@ -229,8 +229,9 @@ class Backtester:
             # 4. new entries from confirmed signals
             todays = sigs.get(d, [])
             if todays:
-                pol = d0.policy.get(d) if d in d0.policy.index else None
                 regime = d0.regime.get(d, "unknown") if d in d0.regime.index else "unknown"
+                # policy comes from the configuration under test (the regime classification is data)
+                pol = cfg.regime.policies[regime].model_dump() if regime in cfg.regime.policies else None
                 scored = []
                 for s in todays:
                     sc = d0.scores.at[d, s.stock_id] if (d in d0.scores.index and s.stock_id in d0.scores.columns) else np.nan

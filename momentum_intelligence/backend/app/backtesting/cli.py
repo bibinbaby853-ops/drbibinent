@@ -27,14 +27,14 @@ from .metrics import summarize
 from .walkforward import sensitivity, walk_forward
 
 
-def _store(name, kind, res, metrics, cfg_dump, capital, details=None):
+def _store(name, kind, res, metrics, cfg_dump, capital, details=None, start=None, end=None):
     curve = [[r.session.isoformat(), round(r.equity, 2), round(r.drawdown_pct, 3)] for r in res.equity.itertuples()] if res is not None else []
     trades = [] if res is None else [{"symbol": t.symbol, "strategy": t.strategy, "sector": t.sector, "entry": t.entry_date.isoformat(),
                                       "exit": t.exit_date.isoformat() if t.exit_date else None, "qty": t.qty, "entry_price": t.entry_price,
                                       "pnl": round(t.pnl, 2), "r": round(t.r_multiple, 3), "charges": round(t.charges, 2)} for t in res.trades]
     with session_scope() as db:
-        start = res.start if res is not None else None
-        end = res.end if res is not None else None
+        start = res.start if res is not None else start
+        end = res.end if res is not None else end
         row = BacktestRun(name=name, kind=kind, start=start, end=end, capital=capital, config=cfg_dump, metrics=metrics,
                           equity_curve=curve, trades=trades, details=details or {}, data_as_of=end)
         db.add(row)
@@ -52,6 +52,7 @@ def main(argv=None) -> int:
         sp.add_argument("--name", default=None)
         sp.add_argument("--is-months", type=int, default=12)
         sp.add_argument("--oos-months", type=int, default=6)
+        sp.add_argument("--variants", help="comma-separated subset of sensitivity variants")
     sh = sub.add_parser("show")
     sh.add_argument("--id", type=int)
     a = ap.parse_args(argv)
@@ -80,12 +81,13 @@ def main(argv=None) -> int:
         print(json.dumps({"id": rid, **{k: m[k] for k in ("total_return_pct", "cagr_pct", "sharpe_rf0", "max_drawdown_pct", "trades",
                                                           "expectancy_r", "bench_total_return_pct")}}), flush=True)
     if a.cmd in ("sensitivity", "all"):
-        grid = sensitivity(data, presets.sensitivity_variants(cfg), first, last, capital,
+        variants = presets.sensitivity_variants(cfg)
+        if a.variants:
+            variants = {k: v for k, v in variants.items() if k in a.variants.split(",")}
+        grid = sensitivity(data, variants, first, last, capital,
                            progress=lambda n, m: print(json.dumps({"variant": n, **m}), flush=True))
-        rid = _store(a.name or "sensitivity", "sensitivity", None, {}, cfg.model_dump(mode="json"), capital, {"variants": grid})
-        with session_scope() as db:
-            r = db.get(BacktestRun, rid)
-            r.start, r.end = first, last
+        rid = _store(a.name or "sensitivity", "sensitivity", None, {}, cfg.model_dump(mode="json"), capital, {"variants": grid},
+                     start=first, end=last)
         print(json.dumps({"sensitivity_id": rid}), flush=True)
     if a.cmd in ("walkforward", "all"):
         cands = presets.candidates(cfg)

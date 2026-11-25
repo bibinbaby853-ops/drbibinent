@@ -76,8 +76,22 @@ def test_no_look_ahead_results_up_to_t_do_not_depend_on_later_data():
     pd.testing.assert_frame_equal(full.equity.iloc[: t + 1].reset_index(drop=True), alt.equity.iloc[: t + 1].reset_index(drop=True))
 
 
-def test_regime_policy_blocks_entries():
+def test_regime_policy_comes_from_the_configuration_under_test():
+    from app.backtesting.presets import _regime_open
     d = world({1: trend()})
-    d.policy = pd.Series([{"allow_new_entries": False, "max_new_entries_per_day": 0, "risk_multiplier": 0, "min_score": 100}] * len(SESS), index=SESS)
-    res = Backtester(d, StrategyConfig(), signals={SESS[10]: [Signal(1, "breakout", 103.3, 98.0)]}).run(SESS[0], SESS[-1])
-    assert res.trades == [] and res.counts["rejected_regime"] == 1
+    d.regime = pd.Series("strong_bearish", index=SESS)
+    sig = {SESS[10]: [Signal(1, "breakout", 103.3, 98.0)]}
+    res = Backtester(d, StrategyConfig(), signals=sig).run(SESS[0], SESS[-1])
+    assert res.trades == [] and res.counts["rejected_regime"] == 1          # default: bearish blocks entries
+    opened = Backtester(d, _regime_open(StrategyConfig()), signals=sig).run(SESS[0], SESS[-1])
+    assert len(opened.trades) == 1                                            # variant with the gate off trades
+
+
+def test_variant_capital_is_used():
+    from app.backtesting.walkforward import sensitivity
+    d = world({1: trend()})
+    d.anchor = SESS[0]
+    import app.backtesting.data as dmod
+    d.signals = lambda cfg, a, b: {SESS[10]: [Signal(1, "breakout", 103.3, 98.0)]}
+    out = sensitivity(d, {"1L": StrategyConfig(), "10L": StrategyConfig(simulated_capital_inr=1_000_000)}, SESS[0], SESS[-1], 100_000)
+    assert out["1L"]["charges_total"] != out["10L"]["charges_total"]

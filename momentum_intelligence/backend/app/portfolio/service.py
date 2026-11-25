@@ -222,7 +222,8 @@ def evaluate_proposals(db: Session, acct: PaperAccount, d: date, L: Ledger, cfg:
         sector = uni.sector if uni else cfg.universe_rules.unclassified_sector
         ctx = Context(equity=L.equity, cash=L.cash, exposures=exposures, eligible=bool(uni and uni.eligible),
                       median_value_cr=uni.median_value_cr if uni else None, regime=reg.regime if reg else "unknown",
-                      policy=reg.policy if reg else {"allow_new_entries": False}, entries_today=entries_today, atr=atr,
+                      policy=(cfg.regime.policies[reg.regime].model_dump() if reg and reg.regime in cfg.regime.policies
+                              else {"allow_new_entries": False}), entries_today=entries_today, atr=atr,
                       correlations=corr, adverse_gap_pct=gap)
         prop = Proposal(stock_id=p.stock_id, symbol=p.symbol, sector=sector, strategy=p.strategy, session_date=d, entry=p.entry,
                         stop=p.stop, target=p.target, score=p.score, source=p.source)

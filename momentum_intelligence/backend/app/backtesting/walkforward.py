@@ -116,7 +116,7 @@ def sensitivity(data: BacktestData, variants: dict[str, StrategyConfig], start: 
     cache: dict = {}
     out = {}
     for name, cfg in variants.items():
-        m = run_config(data, cfg, start, end, cache, capital)["metrics"]
+        m = run_config(data, cfg, start, end, cache, cfg.simulated_capital_inr)["metrics"]  # each variant's own capital
         out[name] = {k: m.get(k) for k in ("total_return_pct", "cagr_pct", "sharpe_rf0", "max_drawdown_pct", "trades", "win_rate_pct",
                                            "expectancy_r", "profit_factor", "exposure_pct", "charges_total", "bench_total_return_pct")}
         if progress:
