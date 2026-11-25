@@ -549,6 +549,30 @@ and at most five positions leaves most of the account in cash, so even a
 positive expectancy could not keep pace with a fully invested index.
 **No configuration tested shows an out-of-sample edge.**
 
+**Redesign with a locked holdout (owner's decision after Phase 7).** Protocol
+committed before any result (git `89b1562`): design period 2021-07-01 to
+2025-06-30, data loaded only up to its end; holdout 2025-07-01 onward, one
+logged evaluation; six pre-registered designs; selection = best design-period
+Sharpe among designs positive in both halves.
+
+| Design (design period) | Return | Sharpe | Max DD | 1st half | 2nd half |
+|---|---|---|---|---|---|
+| D0 baseline | -2.9% | -0.11 | 13.4% | -7.9% | -1.1% |
+| D1 no Breakout, gate off | +5.0% | 0.27 | 9.2% | -3.6% | +5.9% |
+| D2 no Breakout, soft gate | +5.8% | 0.35 | 7.2% | -4.4% | +5.7% |
+| D3 D2 + let winners run | +5.9% | 0.35 | 7.6% | -2.8% | +2.9% |
+| D4 D3 + score floor 75 | +4.6% | 0.29 | 7.2% | -2.1% | +0.4% |
+| **D5 D3 + stops capped at 2 ATR (selected)** | +18.5% | 0.77 | 11.7% | +6.0% | +7.0% |
+
+Nifty 50 over the design period: +62.7%. D5's design-period profit came from
+five trades (128% of the net; -Rs 4,740 without them), almost all in 2023.
+
+**Holdout, D5, 2025-07-01 to 2026-11-23: -10.6% (Nifty 50 -0.8%), Sharpe -1.28,
+max drawdown 12.0%, 71 trades, win rate 26.8%, expectancy -0.42R.** The
+redesign failed out of sample. The holdout is now used: any further strategy
+change has to be judged on data that does not exist yet, i.e. forward paper
+trading (ADR-016).
+
 ## 9. Database schema (PostgreSQL, Alembic-managed)
 
 | Table | Key columns | Notes |

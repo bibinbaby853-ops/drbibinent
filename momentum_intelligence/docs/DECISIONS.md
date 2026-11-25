@@ -93,3 +93,13 @@ known only later would leak future information into price-level indicators
 live on www.nseindia.com, which is not reachable. Flags are stored by fetch
 date, so they accumulate point-in-time from now on; backtests before that
 cannot apply surveillance filters and say so in their report.
+
+## ADR-016 Strategy evidence and forward testing (Accepted, after the Phase 7 redesign)
+Neither the original rules nor the best pre-registered redesign showed an
+out-of-sample edge (redesign D5: +18.5% in the design period, -10.6% on the
+locked holdout versus Nifty 50 -0.8%). The 2021-2026 history has now been used
+for design and for the holdout, so it cannot validate further changes. From
+here, strategy variants are evaluated by forward paper trading in parallel
+paper accounts, with results reported as they accrue; backtests on the old
+history are diagnostics only. The platform is presented as a research and
+paper-trading tool with no demonstrated edge.
