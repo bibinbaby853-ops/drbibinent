@@ -1,0 +1,25 @@
+"""Database engine and session handling. ORM models and Alembic migrations arrive in Phase 2."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+
+from ..config import get_settings
+
+
+@lru_cache
+def get_engine() -> Engine:
+    return create_engine(get_settings().database_url, pool_pre_ping=True, connect_args={"connect_timeout": 3})
+
+
+def ping() -> tuple[bool, str]:
+    """Return (reachable, detail). Never raises: health checks must not crash the API."""
+    try:
+        with get_engine().connect() as conn:
+            version = conn.execute(text("select current_setting('server_version')")).scalar_one()
+        return True, f"PostgreSQL {version}"
+    except Exception as exc:  # noqa: BLE001
+        return False, exc.__class__.__name__

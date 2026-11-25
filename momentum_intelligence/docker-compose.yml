@@ -1,0 +1,36 @@
+# Momentum Intelligence: Phase 1 services (database + API).
+# Phase 9 adds the "scheduler" service and Phase 8 the "web" frontend service.
+# Secrets come from .env (never committed); see .env.example.
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${MI_DB_NAME:-momentum}
+      POSTGRES_USER: ${MI_DB_USER:-momentum}
+      POSTGRES_PASSWORD: ${MI_DB_PASSWORD:?set MI_DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MI_DB_USER:-momentum} -d ${MI_DB_NAME:-momentum}"]
+      interval: 10s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MI_DATABASE_URL: postgresql+psycopg://${MI_DB_USER:-momentum}:${MI_DB_PASSWORD}@db:5432/${MI_DB_NAME:-momentum}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/srv/data
+
+volumes:
+  pgdata:
