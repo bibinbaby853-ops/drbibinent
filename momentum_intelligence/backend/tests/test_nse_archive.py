@@ -108,3 +108,23 @@ def test_rights_entitlements_are_not_equities():
     rows = ROWS + [bar("ALPHA-RE", "INE000A20011", 1, 1.2, 0.9, 1.1, 1, 500, series="BE"),
                    bar("ALPHA-RE1", "INE000A20029", 1, 1.2, 0.9, 1.1, 1, 500, series="BE")]
     assert list(n.parse_udiff(udiff_csv(D, rows), D)["symbol"]) == ["ALPHA", "BETA"]
+
+
+def test_excel_workbook_served_as_csv_is_read(tmp_path):
+    import io as _io
+    import pandas as pd
+    buf = _io.BytesIO()
+    pd.read_csv(_io.BytesIO(full_csv(D, ROWS)), dtype=str).to_excel(buf, index=False)
+    http = FakeHttp({n.udiff_url(D): zipped("x.csv", udiff_csv(D, ROWS)), n.full_bhav_url(D): buf.getvalue()})
+    f = n.NSEArchiveProvider(tmp_path, http=http).bhavcopy(D)
+    assert f.data["delivery_pct"].notna().all() and f.notes == []
+
+
+def test_unreadable_files_fail_the_session_or_skip_delivery(tmp_path):
+    from app.market_data.base import ProviderError
+    http = FakeHttp({n.udiff_url(D): zipped("x.csv", udiff_csv(D, ROWS)), n.full_bhav_url(D): b"\x90\x91garbage"})
+    f = n.NSEArchiveProvider(tmp_path, http=http).bhavcopy(D)
+    assert len(f.data) == 2 and any("unreadable full_bhav" in x for x in f.notes)
+    bad = FakeHttp({n.udiff_url(D): b"not a zip"})
+    with pytest.raises(ProviderError, match="unreadable udiff"):
+        n.NSEArchiveProvider(tmp_path / "b", http=bad).bhavcopy(D)

@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .base import (BarFrame, DataMismatch, DataNotPublished, Lineage, ProviderUnavailable, Security, SymbolChange, sha256,
+from .base import (BarFrame, DataMismatch, DataNotPublished, Lineage, ProviderError, ProviderUnavailable, Security, SymbolChange, sha256,
                    utcnow)
 from .calendar import session_bar_start
 from .http import HttpClient
@@ -70,7 +70,11 @@ def _unzip_single(raw: bytes) -> bytes:
 
 
 def _read_csv(raw: bytes) -> pd.DataFrame:
-    df = pd.read_csv(io.BytesIO(raw), dtype=str, skipinitialspace=True, keep_default_na=False)
+    if raw[:4] == b"PK\x03\x04" and b"[Content_Types].xml" in raw[:200]:
+        # NSE occasionally serves an Excel workbook under a .csv name (seen: full bhavcopy 8 Aug 2022)
+        df = pd.read_excel(io.BytesIO(raw), dtype=str, keep_default_na=False)
+    else:
+        df = pd.read_csv(io.BytesIO(raw), dtype=str, skipinitialspace=True, keep_default_na=False)
     df.columns = [c.strip() for c in df.columns]
     df = df.loc[:, [c for c in df.columns if c and not c.startswith("Unnamed")]]
     return df.apply(lambda s: s.str.strip())
@@ -238,6 +242,9 @@ class NSEArchiveProvider:
         except DataMismatch:
             (self.cache_dir / dataset / filename).unlink(missing_ok=True)
             raise
+        except (ValueError, KeyError, UnicodeDecodeError, zipfile.BadZipFile) as exc:
+            # Kept in the cache for inspection; the session is reported, never guessed.
+            raise ProviderError(f"unreadable {dataset} file for {d} ({exc.__class__.__name__}: {exc})") from exc
 
     def bhavcopy(self, d: date) -> BarFrame:
         """One session's main-board equity bars, with ISIN and (when published) delivery figures.
@@ -263,7 +270,7 @@ class NSEArchiveProvider:
             full, lin = self._parsed("full_bhav", full_bhav_url(d), f"{d:%Y%m%d}.csv", d, parse_full_bhav)
             bars = merge_delivery(bars, full)
             lineage.append(lin)
-        except (DataNotPublished, DataMismatch) as exc:
+        except (DataNotPublished, DataMismatch, ProviderError) as exc:
             notes.append(f"delivery figures unavailable: {exc}")
         return BarFrame(bars, lineage, notes=notes)
 
