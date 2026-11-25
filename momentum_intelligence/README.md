@@ -4,9 +4,9 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: Phase 1 complete (architecture and runnable skeleton).** Market data,
-scanning, strategies, portfolio, backtesting, dashboard, alerts and AI arrive
-in Phases 2-10. See `docs/PHASES.md`.
+**Status: Phase 2 complete (market data engine), awaiting confirmation.**
+Scanning, strategies, portfolio, backtesting, dashboard, alerts and AI arrive
+in Phases 3-10. See `docs/PHASES.md`.
 
 ## Documents
 
@@ -20,6 +20,22 @@ in Phases 2-10. See `docs/PHASES.md`.
 * FastAPI service: `GET /api/health`, `GET /api/v1/settings`, OpenAPI docs at `/docs`.
 * PostgreSQL connectivity (development and test databases).
 * Environment checker and Docker Compose definition (database + API).
+* Market data engine (`backend/app/market_data/`): NSE official end-of-day archives (primary), Yahoo (unofficial; intraday, indices, split cross-check), labelled DEMO data, and a Kite adapter that honestly reports it is unavailable here. Polite HTTP with rate limits and retries, raw file cache with SHA-256 lineage, data-quality checks, ISIN-based identity across symbol and ISIN changes, corporate-action factors and adjusted series, Alembic schema.
+
+## Market data commands
+
+```bash
+cd backend
+alembic upgrade head                                          # create / migrate tables
+python -m app.market_data.cli --demo ingest --days 60         # labelled synthetic data
+python -m app.market_data.cli --live ingest --start 2026-01-01 --end 2026-11-25
+python -m app.market_data.cli --live reference                # names, sectors, inactive flags
+python -m app.market_data.cli --live adjust --confirm-yahoo   # check inferred splits against Yahoo
+python -m app.market_data.cli status
+```
+
+Re-running any command gives the same database state. Downloaded files are
+kept under `data/historical/nse/` (git-ignored); `--offline` reads only those.
 
 ## Quick start (local)
 

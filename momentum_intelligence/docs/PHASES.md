@@ -6,8 +6,8 @@ architectural changes. Nothing is reported as working unless its tests pass.
 
 | Phase | Scope | Exit criteria (tests that must pass) | Status |
 |---|---|---|---|
-| 1 | Architecture, requirements, runnable skeleton, validated configuration, health API, environment checker, Docker files | Config validation tests, API health tests, Postgres connectivity test, `docker compose config` valid | **Done, awaiting confirmation** |
-| 2 | Market data engine: provider interface, NSE archive, Yahoo, Demo (Kite adapter stub until host allowed), validation, lineage, raw/adjusted storage, Alembic schema for data tables | Missing/duplicate/stale/OHLC-inconsistency detection, corporate-action factor derivation, provider retry and rate-limit tests, ingest into Postgres | Not started |
+| 1 | Architecture, requirements, runnable skeleton, validated configuration, health API, environment checker, Docker files | Config validation tests, API health tests, Postgres connectivity test, `docker compose config` valid | **Done** (confirmed) |
+| 2 | Market data engine: provider interface, NSE archive, Yahoo, Demo (Kite adapter stub until host allowed), validation, lineage, raw/adjusted storage, Alembic schema for data tables | Missing/duplicate/stale/OHLC-inconsistency detection, corporate-action factor derivation, provider retry and rate-limit tests, ingest into Postgres | **Done, awaiting confirmation** |
 | 3 | Security master, point-in-time universe snapshots, indicator engine | Reference values for every indicator, no look-ahead, liquidity filter (median ₹5 Cr configurable), snapshot reproducibility | Not started |
 | 4 | Relative strength, sector rotation, regime classifier, 100-point score with breakdown | RS normalisation, sector ranking, regime fixtures for all five states, score weights and gates | Not started |
 | 5 | Strategy engine (Breakout, Pullback, Continuation), signal state machine, de-duplication | Rule fixtures per strategy, invalidation, duplicate suppression | Not started |

@@ -17,6 +17,7 @@ only be ``"paper"``.
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
@@ -134,6 +135,12 @@ class Settings(BaseSettings):
     data_mode: Literal["demo", "live"] = "demo"
     daily_provider: Literal["nse_archive", "yahoo", "kite", "demo"] = "nse_archive"
     intraday_provider: Literal["yahoo", "kite", "demo"] = "yahoo"
+    # Raw downloads are kept here (data/historical) so a re-ingest never refetches and lineage hashes can be re-verified.
+    data_dir: Path = Path(__file__).resolve().parents[2] / "data"
+    # Politeness towards public archives: minimum seconds between requests to one host, and retry policy.
+    http_min_interval_s: float = 0.4
+    http_max_retries: int = 4
+    http_timeout_s: float = 30.0
 
     # Secrets: never returned by the API, never logged.
     api_token: SecretStr | None = None

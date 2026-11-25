@@ -129,10 +129,16 @@ class MarketDataProvider(Protocol):
     def daily_bars(self, symbols, start, end) -> BarFrame: ...
     def intraday_bars(self, symbols, interval, start, end) -> BarFrame: ...
     def index_bars(self, index, start, end) -> BarFrame: ...
-    def corporate_actions(self, symbols, start, end) -> list[CorporateAction]: ...
     def security_master(self) -> list[Security]: ...
-    def delivery_stats(self, trade_date) -> DeliveryFrame: ...
 ```
+
+As built in Phase 2 (`app/market_data/base.py`): end-of-day providers also
+expose `bhavcopy(date) -> BarFrame` (one session's cross-section, with
+delivery figures merged in), which is what ingest uses. Corporate actions are
+derived from the bars themselves (section 6.4) rather than a separate feed,
+and Yahoo exposes `splits(symbol)` for confirmation only. Methods a source
+cannot serve raise `ProviderUnavailable` with the reason; none return empty
+data in place of an error.
 
 Each returned dataset carries `source`, `licence`, `fetched_at` (UTC),
 `as_of` (exchange timestamp of the last completed bar) and a content hash.
@@ -157,33 +163,60 @@ feed (Kite Connect or another vendor) through configuration only. If no real
 provider is reachable the system runs in **DEMO** mode on synthetic data, with
 a banner on every page and a `demo` flag on every stored row.
 
-### 6.3 Data quality checks (run on every ingest, logged to `data_provider_logs`)
+### 6.3 Data quality checks (run on every ingest, stored in `data_quality_issues`)
 
-1. Missing candles versus the NSE trading calendar (gap list per symbol).
-2. Duplicate (symbol, timestamp) records, rejected by a unique constraint.
-3. OHLC consistency: `low <= min(open, close) <= max(open, close) <= high`, volume >= 0.
-4. Stale data: last bar older than the latest completed session.
-5. Unexplained jumps above the price band without a corporate action.
-6. Cross-source reconciliation: NSE close versus Yahoo close beyond a tolerance.
-7. Incomplete current-session bars are never stored as daily candles.
+Implemented in `app/market_data/validation.py` (Phase 2):
 
-Failures quarantine the affected symbol for that session (it cannot generate
-signals) instead of silently filling values. **Missing prices are never
-fabricated.**
+| Check | Severity | Effect |
+|---|---|---|
+| Duplicate ISIN, or duplicate symbol+series, in one session | blocking | rows not stored |
+| Missing / non-positive price, OHLC inconsistency, invalid volume | blocking | rows not stored |
+| Missing ISIN (exchange data) | blocking | rows not stored (cannot be keyed) |
+| Close moves > 25% versus the published previous close | warning | stored, flagged |
+| Zero volume | warning | stored, flagged |
+| Missing sessions in a stock's history | info | reported, never filled |
+| Stale history (last bar before the latest session) | warning | reported |
+| Unexplained jump (> 25%, no corporate-action factor) | warning | reported |
+| NSE versus Yahoo close beyond 0.5% | warning | reported (`reconcile`) |
+| File for a different session than requested (holiday placeholder) | - | file rejected and evicted from cache |
+| Corporate action inferred from a price gap / disagreement with Yahoo | warning | reported; disagreement stops the factor being applied |
+
+Incomplete bars are never stored: a daily bar only after 15:30 IST, an
+intraday bar only after its end time (`calendar.py`). **Missing prices are
+never fabricated.**
 
 ### 6.4 Raw versus adjusted prices and corporate actions
 
-`market_candles` stores raw exchange prices. Adjusted series are derived and
-stored separately with the factor history in `corporate_actions`:
+`market_candles` stores raw exchange prices (`is_adjusted=false`). Adjusted
+rows (`is_adjusted=true`) are derived in SQL from raw rows and the factors in
+`corporate_actions`: adjusted price on day d = raw x product of factors with
+ex-date > d; volume divided by the same product. Raw rows are never changed.
 
-* NSE bhavcopy publishes `PREV_CLOSE` already adjusted on an ex-date. When
-  `PREV_CLOSE(t)` differs from `CLOSE(t-1)` beyond rounding, the ratio is a
-  corporate-action factor (split, bonus, rights). This gives deterministic
-  factors from official data.
-* Yahoo split events are used as a cross-check; disagreements raise a data
-  quality event instead of picking one silently.
-* Symbol changes are tracked through ISIN (stable across renames) in the
-  `stocks` table; history is joined on ISIN, not symbol.
+Factors come from two rules (`adjustments.py`):
+
+1. **Exchange-adjusted previous close** (confidence high). When NSE's
+   `PREV_CLOSE(t)` differs from `CLOSE(t-1)` beyond one tick, the ratio is the
+   factor, snapped to the exact fraction when tick rounding explains the
+   difference.
+2. **Ratio-shaped gap** (confidence medium). Phase 2 found that NSE does
+   **not** always adjust `PREV_CLOSE`: for BNAGROCHEM's 1:10 split on
+   16 Nov 2026 the published previous close was the unadjusted 162.66
+   against an open of 17.00. So a raw move beyond 35% that a common
+   split/bonus ratio brings back inside +-20% (open and close) is recorded
+   as an inferred factor and flagged.
+
+`adjust --confirm-yahoo` checks inferred factors against Yahoo split history
+(unofficial): a match raises confidence to high; a different ratio sets it to
+low, which removes the factor from the adjusted series and raises a warning.
+Confirmation is a second opinion, not a substitute for the exchange record.
+
+**Identity.** `stocks.key` is the current ISIN (`DEMO:<symbol>` for demo
+data). A symbol change keeps the row (ISIN unchanged). A split that changes
+the ISIN keeps the row too: an unknown ISIN whose symbol traded on the
+previous session under an ISIN missing today is the same company, as is one
+named by `symbolchange.csv` for that day. Every symbol/ISIN a stock has had is
+in `stock_symbol_history`, so back-filling older sessions maps old ISINs to
+the same row.
 
 ### 6.5 Survivorship-bias control
 
@@ -314,10 +347,12 @@ simulation, never as expected returns.
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `stocks` | isin (PK), symbol, name, series, sector, industry, listing_date, status | Symbol history in `stock_symbol_history` |
+| `stocks` | id, key (unique: ISIN or DEMO:symbol), isin, symbol, name, series, sector, status, first_seen, last_seen, demo | Symbol/ISIN history in `stock_symbol_history` |
+| `trading_sessions` | (session_date, source) | A date is a session only if the exchange file exists |
+| `data_quality_issues` | source, stock_id, session_date, check, severity, details | Every failed check |
 | `stock_universe_snapshots` | session_date, isin, eligible, reason, median_value_20d, data_quality | Point-in-time universe |
-| `market_candles` | isin, interval, ts, open, high, low, close, volume, source, fetched_at, is_adjusted, demo | Unique (isin, interval, ts, is_adjusted, source) |
-| `corporate_actions` | isin, ex_date, kind, factor, source, confidence | Raw-to-adjusted factors |
+| `market_candles` | stock_id, interval, ts, session_date, OHLCV, turnover, trades, delivery, prev_close, source, licence, dataset_id, is_adjusted, demo | Unique (stock_id, interval, ts, is_adjusted, source) |
+| `corporate_actions` | stock_id, ex_date, kind, factor, source, confidence, details | Raw-to-adjusted factors |
 | `technical_indicators` | isin, session_date, name, value, params_hash | Only values used in decisions are persisted |
 | `sector_data` | sector, session_date, rs_1m..rs_12m, breadth, new_highs, rank, rotation | |
 | `momentum_scores` | isin, session_date, total, coverage, breakdown (JSONB), version | Full sub-check breakdown |
