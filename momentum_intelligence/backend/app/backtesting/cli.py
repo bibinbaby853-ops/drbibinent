@@ -53,6 +53,11 @@ def main(argv=None) -> int:
         sp.add_argument("--is-months", type=int, default=12)
         sp.add_argument("--oos-months", type=int, default=6)
         sp.add_argument("--variants", help="comma-separated subset of sensitivity variants")
+    rd = sub.add_parser("redesign", help="evaluate the pre-registered designs on the design period only")
+    rd.add_argument("--name", default="redesign")
+    ho = sub.add_parser("holdout", help="ONE final evaluation of a chosen design on the locked holdout period")
+    ho.add_argument("--design", required=True)
+    ho.add_argument("--confirm", action="store_true", help="required: acknowledges this consumes the holdout")
     sh = sub.add_parser("show")
     sh.add_argument("--id", type=int)
     a = ap.parse_args(argv)
@@ -67,12 +72,19 @@ def main(argv=None) -> int:
                       f"sharpe {m.get('sharpe_rf0')} maxDD {m.get('max_drawdown_pct')}% trades {m.get('trades')} "
                       f"(Nifty {m.get('bench_total_return_pct')}%)")
         return 0
+    if a.cmd == "redesign":
+        return _redesign(a, cfg)
+    if a.cmd == "holdout":
+        return _holdout(a, cfg)
     with session_scope() as db:
         first = date.fromisoformat(a.start) if a.start else db.scalar(select(func.min(RelativeStrength.session_date)))
         last = date.fromisoformat(a.end) if a.end else db.scalar(select(func.max(TradingSession.session_date)))
         t = time.time()
         data = load(db, first, last, cfg)
     print(f"data loaded in {time.time() - t:.0f}s: {len(data.sessions)} sessions, {len(data.frames)} stocks", flush=True)
+    if last >= presets.HOLDOUT_START:
+        print(f"NOTE: this range reaches into the holdout period (from {presets.HOLDOUT_START}); research runs for design "
+              "decisions must end before it (use `redesign`).", flush=True)
     capital = cfg.simulated_capital_inr
     if a.cmd in ("run", "all"):
         res = Backtester(data, cfg).run(first, last)
@@ -100,6 +112,68 @@ def main(argv=None) -> int:
                      capital, {"windows": wf["windows"]})
         print(json.dumps({"walkforward_id": rid, **{k: wf["oos"][k] for k in ("total_return_pct", "cagr_pct", "sharpe_rf0", "max_drawdown_pct",
                                                                                "trades", "expectancy_r", "bench_total_return_pct")}}), flush=True)
+    return 0
+
+
+KEYS = ("total_return_pct", "cagr_pct", "sharpe_rf0", "max_drawdown_pct", "trades", "win_rate_pct", "expectancy_r", "profit_factor",
+        "exposure_pct", "charges_total", "bench_total_return_pct", "by_strategy")
+
+
+def _redesign(a, cfg) -> int:
+    """Design period only: data is loaded up to the day before the holdout, so nothing later can leak in."""
+    from datetime import timedelta
+    end = presets.HOLDOUT_START - timedelta(days=1)
+    with session_scope() as db:
+        data = load(db, presets.DESIGN_START, end, cfg)
+    assert data.sessions[-1] < presets.HOLDOUT_START
+    print(f"design data: {data.sessions[0]}..{data.sessions[-1]} ({len(data.frames)} stocks)", flush=True)
+    cache, results = {}, {}
+    periods = {"full": (presets.DESIGN_START, end), "h1": (presets.DESIGN_START, presets.DESIGN_SPLIT - timedelta(days=1)),
+               "h2": (presets.DESIGN_SPLIT, end)}
+    from .walkforward import run_config
+    for name, (why, dcfg) in presets.designs(cfg).items():
+        results[name] = {"rationale": why}
+        for pname, (s, e) in periods.items():
+            m = run_config(data, dcfg, s, e, cache, dcfg.simulated_capital_inr)["metrics"]
+            results[name][pname] = {k: m.get(k) for k in KEYS}
+        f, h1, h2 = results[name]["full"], results[name]["h1"], results[name]["h2"]
+        print(json.dumps({"design": name, "full_ret": f["total_return_pct"], "full_sharpe": f["sharpe_rf0"], "maxdd": f["max_drawdown_pct"],
+                          "trades": f["trades"], "expR": f["expectancy_r"], "exposure": f["exposure_pct"],
+                          "h1_ret": h1["total_return_pct"], "h2_ret": h2["total_return_pct"]}), flush=True)
+    ok = {n: r for n, r in results.items() if n != "D0_baseline" and (r["h1"]["total_return_pct"] or 0) > 0
+          and (r["h2"]["total_return_pct"] or 0) > 0 and r["full"]["sharpe_rf0"] is not None}
+    order = list(presets.designs(cfg))
+    chosen = max(ok, key=lambda n: (round(ok[n]["full"]["sharpe_rf0"], 2), -order.index(n))) if ok else None
+    _store(a.name, "redesign", None, {}, {"designs": order, "rule": "best design-period Sharpe among designs positive in both halves"},
+           cfg.simulated_capital_inr, {"results": results, "chosen": chosen, "holdout_start": presets.HOLDOUT_START.isoformat()},
+           start=presets.DESIGN_START, end=end)
+    print(json.dumps({"chosen": chosen, "eligible": sorted(ok)}), flush=True)
+    return 0
+
+
+def _holdout(a, cfg) -> int:
+    designs = presets.designs(cfg)
+    if a.design not in designs:
+        print(f"unknown design {a.design}; choose from {list(designs)}")
+        return 2
+    with session_scope() as db:
+        used = db.execute(select(BacktestRun).where(BacktestRun.kind == "holdout")).scalars().all()
+    if used and not a.confirm:
+        print(f"the holdout has already been evaluated ({[u.name for u in used]}); a second look biases it. Re-run with --confirm "
+              "only if you accept that, and report it.")
+        return 3
+    if not a.confirm:
+        print("holdout evaluation consumes the untouched period; re-run with --confirm")
+        return 3
+    _, dcfg = designs[a.design]
+    with session_scope() as db:
+        last = db.scalar(select(func.max(TradingSession.session_date)))
+        data = load(db, presets.DESIGN_START, last, dcfg)
+    res = Backtester(data, dcfg, capital=dcfg.simulated_capital_inr).run(presets.HOLDOUT_START, last)
+    m = summarize(res, dcfg.simulated_capital_inr, data.nifty)
+    rid = _store(f"holdout:{a.design}", "holdout", res, m, dcfg.model_dump(mode="json"), dcfg.simulated_capital_inr,
+                 {"previous_holdout_runs": [u.name for u in used]})
+    print(json.dumps({"holdout_id": rid, **{k: m.get(k) for k in KEYS}}, default=str))
     return 0
 
 
