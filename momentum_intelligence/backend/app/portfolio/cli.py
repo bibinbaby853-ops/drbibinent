@@ -56,9 +56,8 @@ def main(argv=None) -> int:
         if a.cmd == "propose":
             p = svc.propose(db, acct, a.symbol, a.entry, a.stop, target=a.target,
                             session_date=date.fromisoformat(a.date) if a.date else None, note=a.note, cfg=cfg)
-            out = {"proposal_id": p.id, "symbol": p.symbol, "session": p.session_date.isoformat(), "status": p.status}
-            if acct.last_processed and p.session_date == acct.last_processed and p.status == "pending":
-                out["evaluated"] = [x for x in svc.evaluate_now(db, acct, cfg) if x["proposal_id"] == p.id]
+            out = {"proposal_id": p.id, "symbol": p.symbol, "session": p.session_date.isoformat(), "status": p.status,
+                   "decision": p.decision}
             print(json.dumps(out, indent=2, default=str))
             return 0
         if a.cmd == "exit":

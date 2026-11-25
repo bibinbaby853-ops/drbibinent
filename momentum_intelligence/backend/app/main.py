@@ -12,6 +12,7 @@ from fastapi import FastAPI
 
 from . import __version__
 from .api.system import router as system_router
+from .api.portfolio import router as portfolio_router
 from .api.scoring import router as scoring_router
 from .api.universe import router as universe_router
 from .config import default_strategy_config, get_settings
@@ -29,6 +30,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(universe_router)
     app.include_router(scoring_router)
+    app.include_router(portfolio_router)
     return app
 
 

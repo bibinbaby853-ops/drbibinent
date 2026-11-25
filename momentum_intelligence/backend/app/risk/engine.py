@@ -78,6 +78,7 @@ class Decision:
     initial_risk: float | None = None
     estimated_charges: float | None = None
     reason: str | None = None
+    risk_budget: float | None = None      # rupees this position may lose at its stop (re-applied at fill time)
 
 
 def evaluate(p: Proposal, ctx: Context, cfg: StrategyConfig) -> Decision:
@@ -166,7 +167,8 @@ def evaluate(p: Proposal, ctx: Context, cfg: StrategyConfig) -> Decision:
                  reserve=round(reserve, 2))):
         return r
     # 9
-    worst = max(ctx.correlations.items(), key=lambda kv: kv[1], default=(None, None))
+    valid = {k: v for k, v in ctx.correlations.items() if v is not None and not math.isnan(v)}
+    worst = max(valid.items(), key=lambda kv: kv[1], default=(None, None))
     if worst[1] is not None and worst[1] > cfg.risk.max_correlation:
         sym = next((e.symbol for e in ctx.exposures if e.stock_id == worst[0]), worst[0])
         return reject("correlation", f"correlation {worst[1]:.2f} with {sym} exceeds {cfg.risk.max_correlation}")
@@ -184,4 +186,5 @@ def evaluate(p: Proposal, ctx: Context, cfg: StrategyConfig) -> Decision:
         rec("gap_risk", "pass", note="no gap history")
     qty = state["qty"]
     est = charges("buy", qty, exp_fill, cfg.execution.costs).total
-    return Decision(True, qty, log, expected_fill=exp_fill, initial_risk=round(qty * raw_risk, 2), estimated_charges=est)
+    return Decision(True, qty, log, expected_fill=exp_fill, initial_risk=round(qty * raw_risk, 2), estimated_charges=est,
+                    risk_budget=round(budget, 2))

@@ -149,7 +149,9 @@ def risk_inputs(db: Session, sid: int, held: list[int], d: date, source: str, se
             if h in rets.columns:
                 pair = rets[[sid, h]].dropna()
                 if len(pair) >= 20:
-                    corr[h] = float(pair[sid].corr(pair[h]))
+                    v = pair[sid].corr(pair[h])
+                    if not pd.isna(v):  # undefined for a constant series: no evidence either way
+                        corr[h] = float(v)
     me = s[s.stock_id == sid].tail(cfg.risk.gap_lookback + 1)
     gap = None
     if len(me) > 30:
@@ -167,7 +169,11 @@ def propose(db: Session, acct: PaperAccount, symbol: str, entry: float, stop: fl
                                            Stock.demo.is_(acct.source == "demo"))).scalars().first()
     if stock is None:
         raise LookupError(f"unknown equity symbol {symbol}")
-    d = session_date or sessions(db, acct.source)[-1]
+    # default: the session whose close the account last processed (the data the proposal is based on)
+    d = session_date or acct.last_processed or sessions(db, acct.source)[-1]
+    if acct.last_processed is not None and d < acct.last_processed:
+        raise ValueError(f"session {d} is before the last processed session {acct.last_processed}; propose for "
+                         f"{acct.last_processed} or later")
     key = f"acct{acct.id}:{strategy}:{stock.id}:{d.isoformat()}"
     existing = db.execute(select(TradeProposal).where(TradeProposal.idempotency_key == key)).scalars().first()
     if existing:
@@ -179,6 +185,9 @@ def propose(db: Session, acct: PaperAccount, symbol: str, entry: float, stop: fl
                       session_date=d, entry=entry, stop=stop, target=target, score=score, note=note, idempotency_key=key)
     db.add(p)
     db.flush()
+    if acct.last_processed is not None and d == acct.last_processed:
+        # its session's run is over: risk-check it now so it can be ordered for the next open
+        evaluate_proposals(db, acct, d, load_ledger(db, acct), cfg, sessions(db, acct.source, upto=d))
     return p
 
 
@@ -222,6 +231,7 @@ def evaluate_proposals(db: Session, acct: PaperAccount, d: date, L: Ledger, cfg:
             db.add(RiskEvent(account_id=acct.id, session_date=d, proposal_id=p.id, check=c["check"], outcome=c["outcome"],
                              details={**c["details"], "qty_after": c["qty_after"]}))
         p.decision = {"approved": dec.approved, "qty": dec.qty, "reason": dec.reason, "expected_fill": dec.expected_fill,
+                      "risk_budget": dec.risk_budget,
                       "initial_risk": dec.initial_risk, "estimated_charges": dec.estimated_charges, "regime": ctx.regime,
                       "equity": round(ctx.equity, 2)}
         if not dec.approved:
@@ -329,11 +339,18 @@ def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig) -> di
                 journal(db, acct, d, "entry_cancelled", o.reason, order_id=o.id)
                 continue
             px = fill_price("buy", op, bps)
+            # Re-apply the limits at the actual fill: a higher open than planned means more risk per share.
             reserve = L.equity * cfg.cash_reserve_pct / 100
             affordable = math.floor(max(L.cash - reserve, 0) / (px * 1.0012))
-            qty = min(o.qty, affordable)
+            per_share = px - prop.stop
+            budget = (prop.decision or {}).get("risk_budget") or float("inf")
+            agg_room = L.equity * cfg.max_initial_aggregate_risk_pct / 100 - L.aggregate_initial_risk()
+            limits = {"order": o.qty, "cash_reserve": affordable, "position_risk": math.floor(budget / per_share),
+                      "aggregate_risk": math.floor(max(agg_room, 0) / per_share)}
+            qty = min(limits.values())
+            binding = min(limits, key=limits.get)
             if qty < 1:
-                o.status, o.reason = "cancelled", "insufficient cash above the reserve at fill time"
+                o.status, o.reason = "cancelled", f"no room at fill price {px} ({binding} limit)"
                 journal(db, acct, d, "entry_cancelled", o.reason, order_id=o.id)
                 continue
             ch = charges("buy", qty, px, cfg.execution.costs)
@@ -350,7 +367,7 @@ def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig) -> di
                            highest_close=px, entry_qty=qty, buy_charges=0.0, target=prop.target), px, ch.total)
             o.status, o.filled_session, o.fill_price, o.slippage_bps, o.charges, o.position_id = "filled", d, px, bps, ch.to_dict(), row.id
             if qty < o.qty:
-                o.reason = (o.reason or "") + f" | filled {qty} of {o.qty} (cash reserve at fill)"
+                o.reason = (o.reason or "") + f" | filled {qty} of {o.qty} ({binding} limit at fill price {px})"
                 o.qty = qty
             journal(db, acct, d, "buy_filled", f"entry filled at open {op} + {bps} bps", position_id=row.id, order_id=o.id,
                     qty=qty, price=px, charges=ch.total)
@@ -396,7 +413,12 @@ def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig) -> di
                 db.flush()
                 journal(db, acct, d, "exit_order", o.reason, position_id=int(p.key), order_id=o.id)
 
-    # 4. new entries
+    # 4. new entries (anything still pending from an earlier session is expired, never executed on stale data)
+    for stale in db.execute(select(TradeProposal).where(TradeProposal.account_id == acct.id, TradeProposal.status == "pending",
+                                                        TradeProposal.session_date < d)).scalars():
+        stale.status = "expired"
+        stale.decision = {"approved": False, "reason": f"not evaluated on its session {stale.session_date}; expired on {d}"}
+        journal(db, acct, d, "proposal_expired", stale.decision["reason"], symbol=stale.symbol, proposal_id=stale.id)
     summary["proposals"] = evaluate_proposals(db, acct, d, L, cfg, sess)
 
     # 5. snapshot, alerts, reconciliation

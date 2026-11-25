@@ -347,7 +347,7 @@ class TradeProposal(Base):
     stop: Mapped[float] = mapped_column(Float)
     target: Mapped[float | None] = mapped_column(Float)
     score: Mapped[float | None] = mapped_column(Float)
-    status: Mapped[str] = mapped_column(String(12), default="pending")  # pending | ordered | rejected
+    status: Mapped[str] = mapped_column(String(12), default="pending")  # pending | ordered | rejected | expired
     decision: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     note: Mapped[str | None] = mapped_column(Text)
     idempotency_key: Mapped[str] = mapped_column(String(120), unique=True)

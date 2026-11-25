@@ -418,30 +418,66 @@ liquid eligible NSE stocks (2021-2026: daily-return correlation 0.86; the 4
 days with a gap over 3% were genuine mid-cap selloffs, e.g. 4 June 2024; the 6
 missing Yahoo bars are NSE weekend special sessions).
 
-### 8.7 Risk engine (hard gate, every order passes it)
-Checks in order, all logged to `risk_events`:
-1. Data quality and liquidity gate for the symbol.
-2. Regime policy allows new entries.
-3. Position size = floor(equity x risk% / (entry - stop)), adjusted for volatility.
-4. Individual exposure <= 20% of equity.
-5. Sector exposure <= 30% after the trade.
-6. Open positions < 5; no duplicate position or pending order in the symbol.
-7. Aggregate initial risk <= 2.5% of equity.
-8. Cash after the trade >= 20% reserve.
-9. Correlation with open positions (60-day returns) below a limit.
-10. Gap risk: stop distance versus the stock's historical overnight gap distribution.
-Drawdown alerts at 3% and 5% from the equity peak.
+### 8.7 Risk engine (`app/risk/engine.py`, hard gate, every entry passes it)
+Ten checks in a fixed order, each stored in `risk_events` (pass, capped,
+reject or skipped). A check can only reduce the quantity; the first
+rejection stops evaluation.
 
-### 8.8 Paper execution and portfolio accounting
-Orders are created from confirmed signals after the session close and filled
-at the **next bar's open** with configurable slippage (bps of price, wider
-for low liquidity). Charges follow the Indian delivery cost structure (STT,
-exchange transaction charges, SEBI fee, stamp duty, GST, DP charge;
-brokerage configurable) in a versioned cost model. Every order carries an
-idempotency key (strategy, symbol, signal id) so it cannot be executed
-twice. Supports partial exits, trailing stops, time stops and manual
-rebalancing. Every state change writes a journal row with the reason and
-the data timestamp it relied on.
+1. data_quality: eligible in that session's universe snapshot.
+2. regime: policy allows new entries, today's entry count, minimum score.
+3. sizing: qty = floor(equity x 0.5% x regime multiplier / effective risk),
+   effective risk = max(expected fill - stop, 1 x ATR(14)) at the expected
+   fill (planned entry plus slippage); stops above the entry or more than 15%
+   below it are rejected.
+4. position_cap: value <= 20% of equity.
+5. sector_cap: sector value after the trade <= 30% ("Unclassified" is one sector).
+6. position_count: open + pending < 5; no duplicate symbol.
+7. aggregate_risk: initial risk of open + pending + new <= 2.5% of equity.
+8. cash_reserve: cash after the purchase and charges >= 20% of equity.
+9. correlation: 60-session daily-return correlation with each open position <= 0.80.
+10. gap_risk: if the 95th-percentile adverse overnight gap (250 sessions) exceeds
+    the stop distance, size so that gap stays within the budget.
+
+**At fill time the limits are applied again** with the actual fill price:
+an open above the plan means more risk per share, so the quantity is cut to
+keep the position within its rupee risk budget and the account within the
+aggregate cap (found on real 2025 data, where a gap-up pushed aggregate
+initial risk to Rs 2,613 against a Rs 2,500 cap before this was added).
+Drawdown alerts at 3% and 5% from the equity peak are raised once per
+crossing.
+
+### 8.8 Paper execution and portfolio accounting (`app/portfolio/`)
+Daily cycle per account (`service.run_day`), one transaction per session:
+
+0. corporate actions with ex-date that day: quantity / factor, price levels x factor
+1. pending orders fill at the session's OPEN (raw exchange price) with
+   slippage of 5 / 10 / 20 bps for median traded value >= Rs 50 Cr / >= 10 Cr /
+   below, rounded to the 0.05 tick. An entry is cancelled if the open is at or
+   below its stop or more than 3% above the planned entry, and expires if the
+   stock does not trade.
+2. resting stops and partial targets act on the session's high and low. A stop
+   fills at min(open, stop); if a bar touches both stop and target the stop is
+   assumed first (conservative).
+3. after the close: mark to market; after a partial exit (1/3 at 2R by
+   default) the stop moves to breakeven; from +1.5R a chandelier trail
+   (highest close since entry - 3 x ATR) raises it, never lowers it; a time
+   stop after 40 sessions (8 weeks) sells at the next open.
+4. pending proposals dated that session go through the risk engine; approved
+   ones become entry orders for the next open. A proposal added after its
+   session was processed is evaluated at once; one left pending from an
+   earlier session expires and is never executed on stale data.
+5. snapshot, drawdown alerts and reconciliation. Cash must equal capital -
+   buys - buy charges + sells - sell charges, and realised P&L must equal
+   sales - cost of shares sold - all charges on them; a mismatch aborts the day.
+
+Charges (`costs.py`, model `in-delivery-2024-10`, configurable): STT 0.1%
+both sides, NSE transaction charge 0.00297%, SEBI fee Rs 10/crore, stamp duty
+0.015% on buys, GST 18% on brokerage + exchange + SEBI, DP charge Rs 15.93 per
+sell, brokerage configurable (0 by default). Rates change: verify against a
+contract note. A session is processed once per account; every order has a
+unique idempotency key. Every state change writes a `trade_journal` row with
+its reason and the data session it used. Proposals come from the CLI or API
+now and from Phase 5 strategies later, through the same interface.
 
 ### 8.9 Backtesting
 An event-driven daily simulator that calls the same strategy, risk and
@@ -471,8 +507,10 @@ simulation, never as expected returns.
 | `market_regime` | session_date, regime, score, coverage, components, policy | |
 | `momentum_scores` | session_date, stock_id, config_hash, total, coverage, band, groups, breakdown (JSONB, recent sessions) | Full sub-check breakdown |
 | `trade_signals` | id, isin, strategy, state, session_date, entry_low/high, stop, targets, reasons (JSONB) | State machine history in `signal_events` |
-| `paper_orders` | id, idempotency_key (unique), side, qty, type, limit, status, created_at, filled_at, fill_price, slippage, charges | |
-| `paper_positions` | id, isin, qty, avg_price, initial_stop, trailing_stop, opened_at, closed_at, strategy, initial_risk | |
+| `paper_accounts` | id, name, mode ('paper'), initial_capital, cash, realised_pnl, charges, peak_equity, last_processed | One row per paper account |
+| `trade_proposals` | id, account_id, stock_id, strategy, session_date, entry, stop, target, score, status, decision, idempotency_key | Manual now, strategies later |
+| `paper_orders` | id, idempotency_key (unique), proposal_id, position_id, side, kind, qty, reference_price, status, filled_session, fill_price, slippage_bps, charges | |
+| `paper_positions` | id, stock_id, qty, entry_qty, avg_price, initial_stop, stop, target, initial_risk, buy_charges, highest_close, partial_done, entry_date, closed_date | |
 | `portfolio_snapshots` | ts, equity, cash, invested, unrealised, realised, drawdown, exposure (JSONB) | |
 | `risk_events` | ts, check, outcome, details (JSONB), order_id | Every gate decision |
 | `trade_journal` | ts, position_id, action, reason, data_as_of, user_note | Audit trail |
