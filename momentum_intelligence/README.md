@@ -4,9 +4,9 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: Phase 3 complete (point-in-time universe and indicators), awaiting
-confirmation.** Scoring, strategies, portfolio, backtesting, dashboard, alerts
-and AI arrive in Phases 4-10. See `docs/PHASES.md`.
+**Status: Phase 4 complete (relative strength, sector rotation, market regime,
+100-point score), awaiting confirmation.** Strategies, portfolio, backtesting,
+dashboard, alerts and AI arrive in Phases 5-10. See `docs/PHASES.md`.
 
 ## Documents
 
@@ -24,7 +24,8 @@ and AI arrive in Phases 4-10. See `docs/PHASES.md`.
 
 * Universe engine (`backend/app/universe/`): point-in-time eligibility for every session with reason codes (series, liquidity, history, data quality, unconfirmed corporate actions, GSM), reproducible snapshots keyed by rule hash.
 * Indicator engine (`backend/app/indicators/`): trend, momentum, volatility, level, volume and weekly indicators, causal and point-in-time adjusted.
-* Read-only API: `GET /api/v1/universe`, `GET /api/v1/stocks/{symbol}/indicators` (bearer token required when `MI_API_TOKEN` is set).
+* Scoring (`backend/app/scoring/`): relative strength vs Nifty 50 / Nifty 500 / sector with a 1-99 rank and classes; sector rotation from constituent composites; five-state market regime with entry policy and hysteresis; 100-point score with 28 recorded sub-checks.
+* Read-only API (bearer token required when `MI_API_TOKEN` is set): `/api/v1/universe`, `/api/v1/stocks/{symbol}/indicators`, `/api/v1/market/regime`, `/api/v1/sectors`, `/api/v1/scores`, `/api/v1/stocks/{symbol}/score`.
 
 ## Market data commands
 
@@ -39,6 +40,9 @@ python -m app.market_data.cli status
 python -m app.universe.cli snapshot --indicators              # latest session's universe + indicators
 python -m app.universe.cli snapshot --start 2021-06-01 --end 2026-11-23
 python -m app.universe.cli show
+python -m app.market_data.cli --live indices                  # Nifty 50 / 500 / India VIX (Yahoo, unofficial)
+python -m app.scoring.cli run --start 2021-07-01              # RS, sectors, regime, scores (latest by default)
+python -m app.scoring.cli show
 ```
 
 Re-running any command gives the same database state. Downloaded files are

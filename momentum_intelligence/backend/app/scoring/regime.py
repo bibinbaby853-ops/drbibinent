@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from ..config import RegimeConfig
 
-VERSION = "1"
+VERSION = "2"  # 2: confirmed regime with asymmetric hysteresis
 WEIGHTS = {"nifty50_trend": 2.0, "nifty500_trend": 1.0, "breadth_200": 1.5, "breadth_50": 1.0,
            "sector_participation": 1.0, "volatility": 1.0, "rs_distribution": 1.0}
 
@@ -87,3 +87,28 @@ def classify(inp: dict, cfg: RegimeConfig) -> dict:
             "components": {k: {"points": pts[k], "weight": WEIGHTS[k]} for k in WEIGHTS},
             "inputs": {k: (None if v is None else round(float(v), 4)) for k, v in inp.items()},
             "policy": cfg.policies[regime].model_dump()}
+
+
+ORDER = ("strong_bearish", "moderately_bearish", "sideways", "moderately_bullish", "strong_bullish")
+
+
+def confirm(raw: str, prev: dict | None, cfg: RegimeConfig) -> dict:
+    """Apply hysteresis. ``prev`` = previous session's state {"regime", "pending": [raw regimes]} or None.
+
+    * no history: the raw regime applies
+    * raw worse than (or equal to) the current regime: applies immediately (risk first)
+    * raw better: counted; after ``upgrade_confirm_sessions`` consecutive better sessions the
+      lowest of those raw regimes applies
+    """
+    if prev is None or prev.get("regime") not in ORDER:
+        return {"regime": raw, "pending": [], "changed": False, "reason": "no prior state"}
+    cur = prev["regime"]
+    if ORDER.index(raw) <= ORDER.index(cur):
+        changed = raw != cur
+        return {"regime": raw, "pending": [], "changed": changed, "reason": "downgrade applies at once" if changed else "unchanged"}
+    pending = list(prev.get("pending", [])) + [raw]
+    if len(pending) >= cfg.upgrade_confirm_sessions:
+        new = min(pending, key=ORDER.index)
+        return {"regime": new, "pending": [], "changed": True, "reason": f"upgrade confirmed over {len(pending)} sessions"}
+    return {"regime": cur, "pending": pending, "changed": False,
+            "reason": f"upgrade pending {len(pending)}/{cfg.upgrade_confirm_sessions}"}

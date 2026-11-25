@@ -237,3 +237,21 @@ def test_score_is_scale_invariant():
 def test_regime_policy_defaults_in_strategy_config():
     pol = StrategyConfig().regime.policies
     assert pol["strong_bullish"].risk_multiplier == 1.0 and pol["sideways"].min_score == 85
+
+
+
+def test_regime_hysteresis_downgrades_at_once_and_confirms_upgrades():
+    cfg = RegimeConfig(upgrade_confirm_sessions=3)
+    st = R.confirm("strong_bullish", None, cfg)
+    assert st["regime"] == "strong_bullish"
+    down = R.confirm("sideways", st, cfg)
+    assert down["regime"] == "sideways" and down["changed"]           # worse: immediate
+    s1 = R.confirm("strong_bullish", down, cfg)
+    s2 = R.confirm("moderately_bullish", s1, cfg)
+    assert s1["regime"] == s2["regime"] == "sideways" and s2["pending"] == ["strong_bullish", "moderately_bullish"]
+    s3 = R.confirm("strong_bullish", s2, cfg)
+    assert s3["regime"] == "moderately_bullish" and s3["changed"]     # lowest of the 3 better sessions
+    # a dip back during a pending upgrade resets it
+    p1 = R.confirm("strong_bullish", {"regime": "sideways", "pending": []}, cfg)
+    reset = R.confirm("sideways", p1, cfg)
+    assert reset["regime"] == "sideways" and reset["pending"] == []

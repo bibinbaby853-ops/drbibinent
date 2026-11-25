@@ -318,28 +318,55 @@ Wilder smoothing, ATR, ADX). Values are NaN until enough history exists.
 Prices are adjusted point-in-time (ADR-014). Snapshots are stored as one JSON
 document per stock and session in `technical_indicators`.
 
-### 8.2 Relative strength
-Excess return versus Nifty 50, Nifty 500 and the stock's sector index over 1,
-3, 6 and 12 months, combined into a normalised percentile rank (0-99).
-Classifications: leading (top decile, rising), improving (rank up 20+ points
-in 4 weeks), weakening leader (was top decile, falling), sector outperformer,
-resilient (positive excess return on index down days). RSI is never used as
-relative strength.
+### 8.2 Relative strength (`app/scoring/relative_strength.py`)
+Excess return = (1 + stock return) / (1 + benchmark return) - 1 over 21, 63,
+126 and 252 sessions versus the Nifty 50 (weights 0.2 / 0.4 / 0.2 / 0.2,
+renormalised over the windows that exist; at least 63 sessions required).
+The combined value is ranked across that session's eligible universe:
+1 = weakest, 99 = strongest. Also reported: excess versus Nifty 500 and
+versus the stock's sector composite (63 sessions). Classes:
 
-### 8.3 Sector rotation
-Sector RS, momentum (rank change), breadth (% above 50/200-day averages),
-trend, count of new 52-week highs, constituent volume expansion; ranked
-strongest to weakest with "emerging leadership" flags. No claims of
-institutional accumulation from price and volume.
+* leading: rank >= 90 and not lower than 20 sessions ago
+* improving: rank up 20+ points in 20 sessions
+* weakening leader: rank was >= 90 twenty sessions ago and fell 10+ points
+* sector outperformer: beat both its sector composite and the Nifty 50 over 63 sessions
+* resilient: positive average excess return on Nifty 50 down days over 63 sessions
+  (at least 5 such days) and in the top 20% of the universe on that measure
 
-### 8.4 Momentum score (100 points)
-Trend 25, relative strength 20, volume 15, price action 15, sector 10,
-momentum indicators 10, risk/reward 5. Every sub-check is stored, so the UI
-shows exactly why a stock scored what it did. Missing inputs are N/A and the
-score is renormalised with a coverage figure. A liquidity and data-quality
-gate runs first; a stock failing it is not scored. Bands: 85+ priority,
-75-84 strong, 65-74 developing, below 65 watchlist/excluded. The score never
-bypasses the risk engine.
+RSI is never used as relative strength.
+
+### 8.3 Sector rotation (`app/scoring/sectors.py`)
+NSE sector indices are not reachable, so each sector is an equal-weighted
+composite of its eligible constituents; a stock counts toward a day's return
+only if it was eligible the previous session. Per sector: excess return vs
+Nifty 50 (21/63/126, weights 0.3/0.5/0.2), rank (1 = strongest), rank change
+over 20 sessions, composite above its 50-day average, trend (above SMA50 and
+SMA50 > SMA200), breadth (% of constituents above their 50/200-day SMA), new
+52-week highs today, volume expansion (median 20/50-day volume ratio). Flags:
+`emerging_leadership` (rank up 3+ places, now in the top half, breadth
+improving) and `thin` (fewer than 3 constituents: shown, not ranked).
+"Unclassified" is never ranked. No claims of institutional accumulation are
+made from price and volume.
+
+### 8.4 Momentum score (`app/scoring/score.py`)
+28 sub-checks in seven groups, scaled to the configured weights (trend 25,
+relative strength 20, volume 15, price action 15, sector 10, momentum
+indicators 10, risk/reward 5). Each check records its rule, input values,
+points, maximum and status (pass / partial / fail / n/a). Missing inputs are
+N/A and leave the denominator: total = 100 x earned / available, coverage =
+available / 100 (e.g. an Unclassified stock has coverage 0.87). Only stocks
+eligible in that session's universe are scored (the liquidity and data-quality
+gate). Only scale-invariant inputs are used, so the score is identical on
+point-in-time or back-adjusted prices (tested). Bands: 85+ priority, 75-84
+strong, 65-74 developing, below 65 watchlist. The risk/reward group is a
+proxy (ATR% and distance to the 50-day SMA) until Phase 5 strategies set real
+entry, stop and target levels. Scores are research output, not
+recommendations, and never bypass the risk engine.
+
+Indicators for scoring are computed from each stock's first bar, so values do
+not depend on where a run starts (tested). History keeps totals and group
+points; the per-check breakdown is stored for the latest sessions and is
+always recomputable.
 
 ### 8.5 Strategies (independent, each with its own rules)
 
@@ -357,14 +384,39 @@ A stock may carry only one active signal at a time across strategies
 (priority: Breakout, Continuation, Pullback). Signal states: early warning,
 potential setup, confirmed, invalidated, expired.
 
-### 8.6 Market regime classifier
-Inputs: Nifty 50 and Nifty 500 trend structure, breadth (% above 50/200-day),
-sector participation, India VIX level and change, RS distribution. Output:
-strong bullish, moderately bullish, sideways, moderately bearish, strong
-bearish. Each regime maps to a policy: maximum new entries per day, risk per
-trade multiplier, minimum score, and whether new entries are allowed at all.
+### 8.6 Market regime classifier (`app/scoring/regime.py`)
+Seven components, each scored -2..+2: Nifty 50 trend (weight 2), Nifty 500
+trend (1), % of the universe above its 200-day SMA (1.5) and 50-day SMA (1),
+% of ranked sectors above their 50-day average (1), India VIX level and
+10-session change (1), median 63-session return of the universe (1). The
+weighted mean is scaled to -100..+100; missing components are dropped and
+reported as coverage (below 50% coverage the regime is never bullish).
+Thresholds (configurable): >= 50 strong bullish, >= 20 moderately bullish,
+> -20 sideways, > -50 moderately bearish, else strong bearish. Default
+policy for NEW entries:
+
+| Regime | New entries | Max per day | Risk multiplier | Min score |
+|---|---|---|---|---|
+| strong bullish | yes | 3 | 1.0 | 65 |
+| moderately bullish | yes | 2 | 0.75 | 75 |
+| sideways | yes | 1 | 0.5 | 85 |
+| moderately bearish | no | 0 | 0 | - |
+| strong bearish | no | 0 | 0 | - |
+
+**Hysteresis (risk first).** The raw classification can change daily; the
+regime that drives policy is confirmed: a worse raw regime applies at once,
+a better one only after 3 consecutive sessions (configurable), and then the
+lowest of those sessions' raw regimes applies. Without this, 2022 produced 53
+regime changes (an average run of under 5 sessions). Both the raw and the
+confirmed regime are stored.
+
 Deterioration reduces new-entry eligibility; it never force-closes positions
-by itself.
+by itself. Index levels and VIX are Yahoo data (unofficial); breadth, sector
+participation and the RS distribution come from NSE data. The Nifty 50 series
+is cross-checked daily against an equal-weighted composite of the 50 most
+liquid eligible NSE stocks (2021-2026: daily-return correlation 0.86; the 4
+days with a gap over 3% were genuine mid-cap selloffs, e.g. 4 June 2024; the 6
+missing Yahoo bars are NSE weekend special sessions).
 
 ### 8.7 Risk engine (hard gate, every order passes it)
 Checks in order, all logged to `risk_events`:
@@ -414,8 +466,10 @@ simulation, never as expected returns.
 | `market_candles` | stock_id, interval, ts, session_date, OHLCV, turnover, trades, delivery, prev_close, source, licence, dataset_id, is_adjusted, demo | Unique (stock_id, interval, ts, is_adjusted, source) |
 | `corporate_actions` | stock_id, ex_date, kind, factor, source, confidence, details | Raw-to-adjusted factors |
 | `technical_indicators` | isin, session_date, name, value, params_hash | Only values used in decisions are persisted |
-| `sector_data` | sector, session_date, rs_1m..rs_12m, breadth, new_highs, rank, rotation | |
-| `momentum_scores` | isin, session_date, total, coverage, breakdown (JSONB), version | Full sub-check breakdown |
+| `relative_strength` | session_date, stock_id, rs_rank, rs_rank_change, classes, values (excess returns) | |
+| `sector_data` | session_date, sector, rank, rank_change, constituents, flags, values | |
+| `market_regime` | session_date, regime, score, coverage, components, policy | |
+| `momentum_scores` | session_date, stock_id, config_hash, total, coverage, band, groups, breakdown (JSONB, recent sessions) | Full sub-check breakdown |
 | `trade_signals` | id, isin, strategy, state, session_date, entry_low/high, stop, targets, reasons (JSONB) | State machine history in `signal_events` |
 | `paper_orders` | id, idempotency_key (unique), side, qty, type, limit, status, created_at, filled_at, fill_price, slippage, charges | |
 | `paper_positions` | id, isin, qty, avg_price, initial_stop, trailing_stop, opened_at, closed_at, strategy, initial_risk | |

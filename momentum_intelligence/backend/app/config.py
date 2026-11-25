@@ -97,6 +97,9 @@ class RegimeConfig(BaseModel):
     moderately_bullish_min: float = 20
     sideways_min: float = -20
     moderately_bearish_min: float = -50
+    # Hysteresis, risk first: a worse regime applies at once; a better one only after it has been the raw
+    # classification for this many consecutive sessions (then the lowest of those sessions' raw regimes applies).
+    upgrade_confirm_sessions: int = Field(3, ge=1, le=20)
     policies: dict[str, RegimePolicy] = Field(default_factory=_default_policies)
 
     @model_validator(mode="after")

@@ -34,7 +34,8 @@ def market_regime(session_date: date | None = Query(None, alias="date"), history
     r = db.execute(select(MarketRegime).where(MarketRegime.session_date == d)).scalars().first()
     if r is None:
         raise HTTPException(404, f"no regime for {d}")
-    out = {"session_date": d.isoformat(), "regime": r.regime, "score": r.score, "coverage": r.coverage,
+    out = {"session_date": d.isoformat(), "regime": r.regime, "raw_regime": r.components.get("raw_regime"),
+           "confirmation": r.components.get("confirmation"), "score": r.score, "coverage": r.coverage,
            "components": r.components.get("components"), "inputs": r.components.get("inputs"), "policy": r.policy,
            "benchmark_licence": "unofficial (Yahoo Finance) for index levels and India VIX; breadth from NSE data",
            "note": "A regime restricts NEW entries only; it never closes positions by itself."}

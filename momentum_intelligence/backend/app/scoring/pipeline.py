@@ -16,7 +16,7 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -119,6 +119,10 @@ def run_range(db: Session, start: date, end: date, cfg: StrategyConfig, *, detai
     detail_from = dates[-min(detail_sessions, len(dates))] if detail_sessions else None
     regimes: dict[str, int] = {}
     scored = 0
+    # hysteresis state carries over from the stored session before the range (if any)
+    prior = db.execute(select(MarketRegime).where(MarketRegime.session_date < dates[0], MarketRegime.version == regime_mod.VERSION)
+                       .order_by(MarketRegime.session_date.desc()).limit(1)).scalars().first()
+    state = None if prior is None else {"regime": prior.regime, "pending": prior.components.get("confirmation", {}).get("pending", [])}
     for d in dates:
         e = elig.loc[d]
         sids = [s for s in e.index[e.values] if s in inputs]
@@ -136,6 +140,11 @@ def run_range(db: Session, start: date, end: date, cfg: StrategyConfig, *, detai
         if ranked:
             ri["sector_participation_pct"] = sum(1 for r in ranked if r["values"]["above_sma50"]) / len(ranked) * 100
         reg = regime_mod.classify(ri, cfg.regime)
+        conf = regime_mod.confirm(reg["regime"], state, cfg.regime)
+        state = {"regime": conf["regime"], "pending": conf["pending"]}
+        reg["raw_regime"], reg["regime"] = reg["regime"], conf["regime"]
+        reg["confirmation"] = conf
+        reg["policy"] = cfg.regime.policies[conf["regime"]].model_dump()
         regimes[reg["regime"]] = regimes.get(reg["regime"], 0) + 1
 
         rs_rows, score_rows = [], []
@@ -162,7 +171,8 @@ def run_range(db: Session, start: date, end: date, cfg: StrategyConfig, *, detai
             db.execute(insert(SectorData), [{"session_date": d, **{k: _jsonable(v) for k, v in r.items()}, "version": sec_mod.VERSION}
                                             for r in sec_rows])
         db.execute(insert(MarketRegime).values(session_date=d, regime=reg["regime"], score=reg["score"], coverage=reg["coverage"],
-                                               components={"components": reg["components"], "inputs": reg["inputs"]},
+                                               components={"components": reg["components"], "inputs": reg["inputs"],
+                                                           "raw_regime": reg["raw_regime"], "confirmation": reg["confirmation"]},
                                                policy=reg["policy"], version=regime_mod.VERSION))
         scored += len(score_rows)
         if progress:
