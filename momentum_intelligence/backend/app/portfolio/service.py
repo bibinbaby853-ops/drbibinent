@@ -121,7 +121,7 @@ def pit_atr(db: Session, ids, d: date, source: str, sess: list[date]) -> dict[in
     """ATR(14) in rupees at d on prices adjusted only for corporate actions known by d (ADR-014)."""
     if not ids:
         return {}
-    start = sess[max(0, len(sess) - 80)]
+    start = sess[0]  # full history: Wilder smoothing seeded at the first bar, identical to the backtester and indicators
     raw = _series(db, ids, d, start, source, False)
     fac = pd.read_sql(_FACTORS, db.connection(), params={"ids": list(ids), "src": f"{source}:%"})
     out = {}
@@ -419,7 +419,9 @@ def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig, *, au
             journal(db, acct, d, "stop_raised", "; ".join(r["reasons"]), position_id=int(p.key), old=old, new=p.stop)
         if r["time_exit"]:
             key = f"acct{acct.id}:exit:pos{p.key}:time_stop:{d.isoformat()}"
-            if db.execute(select(PaperOrder.id).where(PaperOrder.idempotency_key == key)).first() is None:
+            already = db.execute(select(PaperOrder.id).where(PaperOrder.position_id == int(p.key), PaperOrder.side == "sell",
+                                                             PaperOrder.status == "pending")).first()
+            if already is None and db.execute(select(PaperOrder.id).where(PaperOrder.idempotency_key == key)).first() is None:
                 o = PaperOrder(account_id=acct.id, idempotency_key=key, position_id=int(p.key), stock_id=p.stock_id, symbol=p.symbol,
                                side="sell", kind="time_stop", qty=p.qty, created_session=d, expires_after=5, reason="; ".join(r["reasons"]))
                 db.add(o)

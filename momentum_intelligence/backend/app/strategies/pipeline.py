@@ -42,6 +42,24 @@ _RAW = text("""select stock_id, session_date, close from market_candles
                  and stock_id = any(cast(:ids as integer[]))""")
 
 
+def stock_frame(panel, sid, rs_rank: pd.DataFrame, rs_ex: pd.DataFrame) -> pd.DataFrame | None:
+    """Indicators + weekly trend + OHLCV + RS for one stock over the panel's sessions (shared with the backtester)."""
+    b = panel.bars(sid)
+    if len(b) < 60:
+        return None
+    f = compute_indicators(b).set_index("session_date").join(weekly_asof(b).set_index("session_date"))
+    f = f.join(b.set_index("session_date")[["open", "high", "low", "volume"]])
+    f["rs_rank"] = rs_rank[sid] if sid in rs_rank else np.nan
+    f["excess_63"] = rs_ex[sid] if sid in rs_ex else np.nan
+    return f
+
+
+def load_rs(db: Session, end: date) -> tuple[pd.DataFrame, pd.DataFrame]:
+    rs = pd.read_sql(_RS, db.connection(), params={"end": end})
+    return (rs.pivot(index="session_date", columns="stock_id", values="rs_rank"),
+            rs.pivot(index="session_date", columns="stock_id", values="excess_63"))
+
+
 def anchor(db: Session) -> date | None:
     return db.scalar(select(func.min(RelativeStrength.session_date)))
 
@@ -54,9 +72,7 @@ def build(db: Session, end: date, cfg: StrategyConfig, *, source: str = "nse_arc
     dates = [d for d in panel.sessions if start <= d <= end]
     if not dates:
         return {"signals": 0}
-    rs = pd.read_sql(_RS, db.connection(), params={"end": end})
-    rs_rank = rs.pivot(index="session_date", columns="stock_id", values="rs_rank")
-    rs_ex = rs.pivot(index="session_date", columns="stock_id", values="excess_63")
+    rs_rank, rs_ex = load_rs(db, end)
     elig = panel.eligible.loc[dates]
     sids = [s for s in elig.columns if elig[s].any()]
     raw = pd.read_sql(_RAW, db.connection(), params={"src": source, "start": start, "end": end, "ids": sids})
@@ -65,13 +81,9 @@ def build(db: Session, end: date, cfg: StrategyConfig, *, source: str = "nse_arc
     h = strategy_hash(cfg)
     rows, events, counts = [], [], {}
     for sid in sids:
-        b = panel.bars(sid)
-        if len(b) < 60:
+        f = stock_frame(panel, sid, rs_rank, rs_ex)
+        if f is None:
             continue
-        f = compute_indicators(b).set_index("session_date").join(weekly_asof(b).set_index("session_date"))
-        f = f.join(b.set_index("session_date")[["open", "high", "low", "volume"]])
-        f["rs_rank"] = rs_rank[sid] if sid in rs_rank else np.nan
-        f["excess_63"] = rs_ex[sid] if sid in rs_ex else np.nan
         f = f.reindex(dates)
         results = evaluate(f, cfg.strategies)
         sigs = machine.run(dates, f["close"], results, cfg.strategies, eligible=elig[sid])
