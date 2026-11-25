@@ -236,3 +236,74 @@ class IndicatorSnapshot(Base):
         UniqueConstraint("session_date", "stock_id", "version", "source", name="uq_indicator_snapshot"),
         Index("ix_indicators_session", "session_date"),
     )
+
+
+class RelativeStrength(Base):
+    """Per-stock relative strength on a session: excess returns, combined rank and classifications."""
+
+    __tablename__ = "relative_strength"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"))
+    rs_rank: Mapped[float | None] = mapped_column(Float)          # 1-99 percentile within the eligible universe
+    rs_rank_change: Mapped[float | None] = mapped_column(Float)   # vs `change_lookback` sessions earlier
+    classes: Mapped[list] = mapped_column(JSONB, default=list)    # leading, improving, weakening_leader, ...
+    values: Mapped[dict] = mapped_column(JSONB, default=dict)     # excess returns per window and benchmark
+    version: Mapped[str] = mapped_column(String(10))
+
+    __table_args__ = (UniqueConstraint("session_date", "stock_id", "version", name="uq_relative_strength"),
+                      Index("ix_rs_session_rank", "session_date", "rs_rank"))
+
+
+class SectorData(Base):
+    """Sector rotation metrics from an equal-weighted composite of the sector's eligible constituents."""
+
+    __tablename__ = "sector_data"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    sector: Mapped[str] = mapped_column(String(100))
+    rank: Mapped[int | None] = mapped_column(Integer)
+    rank_change: Mapped[int | None] = mapped_column(Integer)
+    constituents: Mapped[int] = mapped_column(Integer)
+    flags: Mapped[list] = mapped_column(JSONB, default=list)      # emerging_leadership, thin, ...
+    values: Mapped[dict] = mapped_column(JSONB, default=dict)
+    version: Mapped[str] = mapped_column(String(10))
+
+    __table_args__ = (UniqueConstraint("session_date", "sector", "version", name="uq_sector_data"),)
+
+
+class MarketRegime(Base):
+    __tablename__ = "market_regime"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    regime: Mapped[str] = mapped_column(String(24))
+    score: Mapped[float] = mapped_column(Float)                   # -100..+100
+    coverage: Mapped[float] = mapped_column(Float)                # share of component weight with data
+    components: Mapped[dict] = mapped_column(JSONB, default=dict)
+    policy: Mapped[dict] = mapped_column(JSONB, default=dict)
+    version: Mapped[str] = mapped_column(String(10))
+
+    __table_args__ = (UniqueConstraint("session_date", "version", name="uq_market_regime"),)
+
+
+class MomentumScore(Base):
+    """100-point score. ``breakdown`` holds every sub-check (stored for recent sessions; history keeps totals)."""
+
+    __tablename__ = "momentum_scores"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"))
+    total: Mapped[float] = mapped_column(Float)
+    coverage: Mapped[float] = mapped_column(Float)
+    band: Mapped[str] = mapped_column(String(12))                 # priority | strong | developing | watchlist
+    groups: Mapped[dict] = mapped_column(JSONB, default=dict)     # points per group
+    breakdown: Mapped[list | None] = mapped_column(JSONB(none_as_null=True))  # SQL NULL, not JSON null, when absent
+    version: Mapped[str] = mapped_column(String(10))
+    config_hash: Mapped[str] = mapped_column(String(16))
+
+    __table_args__ = (UniqueConstraint("session_date", "stock_id", "version", "config_hash", name="uq_momentum_score"),
+                      Index("ix_scores_session_total", "session_date", "total"))

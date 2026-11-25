@@ -138,7 +138,14 @@ class TestSnapshotsInDatabase:
             ok = build_snapshot(db, self.sessions[110], cfg, source="demo")
             assert "insufficient_history" not in ok.reasons
             sectors = set(db.execute(select(UniverseSnapshot.sector).where(UniverseSnapshot.session_date == self.sessions[110])).scalars())
-            assert sectors == {"Unclassified"}  # demo stocks have no stored sector
+            from app.market_data.demo import DEMO_SECTORS
+            assert sectors == set(DEMO_SECTORS)  # demo provider's synthetic sector labels
+            # a stock without a stored sector is grouped as Unclassified (ADR-013)
+            db.execute(text("update stocks set sector = null where symbol = 'DEMO01'"))
+            build_snapshot(db, self.sessions[110], cfg, source="demo")
+            row = db.execute(select(UniverseSnapshot.sector).where(UniverseSnapshot.session_date == self.sessions[110],
+                                                                   UniverseSnapshot.symbol == "DEMO01")).scalar_one()
+            assert row == "Unclassified"
 
     def test_indicators_for_eligible_stocks_use_point_in_time_prices(self):
         from app.universe.indicators import compute_for_session
@@ -164,6 +171,7 @@ class TestSnapshotsInDatabase:
         from app.main import create_app
         from app.universe.engine import build_snapshot
         from app.universe.indicators import compute_for_session
+        from app.indicators.panel import INDICATOR_VERSION
         d = self.sessions[-1]
         with self.scope() as db:
             r = build_snapshot(db, d, default_strategy_config(), source="demo")
@@ -178,4 +186,4 @@ class TestSnapshotsInDatabase:
         if u["stocks"]:
             sym = u["stocks"][0]["symbol"]
             ind = c.get(f"/api/v1/stocks/{sym}/indicators", params={"source": "demo"}).json()
-            assert ind["session_date"] == d.isoformat() and "rsi_14" in ind["values"] and ind["indicator_version"] == "1"
+            assert ind["session_date"] == d.isoformat() and "rsi_14" in ind["values"] and ind["indicator_version"] == INDICATOR_VERSION

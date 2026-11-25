@@ -84,6 +84,18 @@ def cmd_adjust(args) -> int:
     return 0
 
 
+def cmd_indices(args) -> int:
+    """Nifty 50, Nifty 500, India VIX daily history from Yahoo (UNOFFICIAL), then a cross-check against NSE data."""
+    from .indices import ingest_indices
+    from .yahoo import YahooProvider
+    start = date.fromisoformat(args.start) if args.start else date(2020, 1, 1)
+    end = date.fromisoformat(args.end) if args.end else date.today()
+    with session_scope() as db:
+        out = ingest_indices(db, YahooProvider(), start, end)
+    print(json.dumps({"licence": "unofficial (Yahoo Finance)", "rows": out}, indent=2))
+    return 0
+
+
 def cmd_status(args) -> int:
     q = {
         "sessions": "select count(*), min(session_date)::text, max(session_date)::text from trading_sessions",
@@ -116,8 +128,12 @@ def main(argv=None) -> int:
     a.add_argument("--confirm-yahoo", action="store_true", help="check inferred split/bonus factors against Yahoo (unofficial)")
     a.add_argument("--rebuild", action="store_true", help="delete derived factors and recompute them from raw bars")
     sub.add_parser("status")
+    ix = sub.add_parser("indices")
+    ix.add_argument("--start")
+    ix.add_argument("--end")
     args = ap.parse_args(argv)
-    return {"ingest": cmd_ingest, "reference": cmd_reference, "adjust": cmd_adjust, "status": cmd_status}[args.cmd](args)
+    return {"ingest": cmd_ingest, "reference": cmd_reference, "adjust": cmd_adjust, "status": cmd_status,
+            "indices": cmd_indices}[args.cmd](args)
 
 
 if __name__ == "__main__":

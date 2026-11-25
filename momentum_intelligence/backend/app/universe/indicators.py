@@ -13,7 +13,8 @@ from ..indicators.panel import INDICATOR_VERSION, latest
 from ..models import IndicatorSnapshot
 from .engine import sessions_upto
 
-HISTORY_SESSIONS = 420  # > 252 for 52-week values plus the 30-week weekly average
+# Full history from the stock's first bar, so EMA/Wilder values never depend on where a window starts.
+HISTORY_SESSIONS = 100_000
 
 _BARS = text("""
     select stock_id, session_date, open, high, low, close, volume from market_candles

@@ -63,6 +63,74 @@ class ScoreBands(BaseModel):
         return self
 
 
+Regime = Literal["strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish"]
+REGIMES: tuple[str, ...] = ("strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish")
+
+
+class RegimePolicy(BaseModel):
+    """What a market regime permits for NEW entries. It never closes open positions by itself."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    allow_new_entries: bool
+    max_new_entries_per_day: int = Field(ge=0)
+    risk_multiplier: float = Field(ge=0, le=1)
+    min_score: float = Field(ge=0, le=100)
+
+
+def _default_policies() -> dict[str, RegimePolicy]:
+    return {
+        "strong_bullish": RegimePolicy(allow_new_entries=True, max_new_entries_per_day=3, risk_multiplier=1.0, min_score=65),
+        "moderately_bullish": RegimePolicy(allow_new_entries=True, max_new_entries_per_day=2, risk_multiplier=0.75, min_score=75),
+        "sideways": RegimePolicy(allow_new_entries=True, max_new_entries_per_day=1, risk_multiplier=0.5, min_score=85),
+        "moderately_bearish": RegimePolicy(allow_new_entries=False, max_new_entries_per_day=0, risk_multiplier=0.0, min_score=100),
+        "strong_bearish": RegimePolicy(allow_new_entries=False, max_new_entries_per_day=0, risk_multiplier=0.0, min_score=100),
+    }
+
+
+class RegimeConfig(BaseModel):
+    """Regime classifier thresholds on the composite score (-100..+100) and the per-regime entry policy."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    strong_bullish_min: float = 50
+    moderately_bullish_min: float = 20
+    sideways_min: float = -20
+    moderately_bearish_min: float = -50
+    policies: dict[str, RegimePolicy] = Field(default_factory=_default_policies)
+
+    @model_validator(mode="after")
+    def _check(self) -> "RegimeConfig":
+        if not (100 >= self.strong_bullish_min > self.moderately_bullish_min > self.sideways_min > self.moderately_bearish_min >= -100):
+            raise ValueError("regime thresholds must be strictly descending within -100..100")
+        if set(self.policies) != set(REGIMES):
+            raise ValueError(f"regime policies must cover exactly {REGIMES}")
+        return self
+
+
+class RelativeStrengthConfig(BaseModel):
+    """Weights of the excess-return windows (sessions) in the combined RS rank; renormalised over available windows."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    window_weights: dict[int, float] = Field(default_factory=lambda: {21: 0.2, 63: 0.4, 126: 0.2, 252: 0.2})
+    min_window: int = 63            # a stock needs at least this window to be ranked
+    leading_rank: float = 90
+    improving_rank_change: float = 20
+    change_lookback: int = 20       # sessions for rank change ("4 weeks")
+    resilience_lookback: int = 63
+    resilience_min_down_days: int = 5
+    resilient_top_pct: float = Field(20, gt=0, le=100)  # "resilient" = positive AND in this top share of the universe
+
+    @model_validator(mode="after")
+    def _check(self) -> "RelativeStrengthConfig":
+        if not self.window_weights or any(w < 0 for w in self.window_weights.values()) or sum(self.window_weights.values()) <= 0:
+            raise ValueError("RS window weights must be non-negative with a positive sum")
+        if self.min_window not in self.window_weights:
+            raise ValueError("min_window must be one of the RS windows")
+        return self
+
+
 class UniverseConfig(BaseModel):
     """Eligibility rules for the point-in-time universe (Phase 3). Liquidity settings live on StrategyConfig."""
 
@@ -109,6 +177,8 @@ class StrategyConfig(BaseModel):
     min_median_traded_value_cr: float = Field(5.0, ge=0)
     liquidity_lookback_sessions: int = Field(20, ge=5)
     universe_rules: UniverseConfig = UniverseConfig()
+    relative_strength: RelativeStrengthConfig = RelativeStrengthConfig()
+    regime: RegimeConfig = RegimeConfig()
 
     score_weights: ScoreWeights = ScoreWeights()
     score_bands: ScoreBands = ScoreBands()

@@ -16,7 +16,7 @@ import pandas as pd
 from . import core
 from .weekly import to_weekly
 
-INDICATOR_VERSION = "1"
+INDICATOR_VERSION = "2"  # 2: adds chg_1d_pct, updown_vol_ratio_20
 
 # Sessions of history each indicator needs before it is defined (documented; used by the universe filter).
 LOOKBACK = {"sma_200": 200, "high_252": 252, "roc_252": 253, "adx_14": 28, "macd": 34, "w_sma_30": 150}
@@ -72,6 +72,10 @@ def compute(bars: pd.DataFrame) -> pd.DataFrame:
     out["vol_sma_50"] = core.sma(v, 50)
     out["rel_volume_20"] = core.relative_volume(v, 20)
     out["rel_volume_50"] = core.relative_volume(v, 50)
+    out["chg_1d_pct"] = c.pct_change(fill_method=None) * 100
+    up, down = (c.diff() > 0), (c.diff() < 0)
+    out["updown_vol_ratio_20"] = (v.where(up, 0).rolling(20, min_periods=20).sum()
+                                  / v.where(down, 0).rolling(20, min_periods=20).sum().replace(0, np.nan))
     out["obv"] = core.obv(c, v)
     out["obv_slope_20"] = out["obv"] - out["obv"].shift(20)
     out["rvol_20"] = core.realized_vol(c, 20)
@@ -117,3 +121,31 @@ def latest(raw: pd.DataFrame, factors: list[tuple[date, float]], as_of: date, *,
     clean["session_date"] = as_of.isoformat()
     clean["indicator_version"] = INDICATOR_VERSION
     return clean
+
+
+def weekly_asof(bars: pd.DataFrame) -> pd.DataFrame:
+    """For every daily session, the weekly indicators of the last COMPLETED week as of that session.
+
+    Vectorised equivalent of calling ``weekly_trend`` per day: a week counts as completed on a
+    Friday (or weekend special session) and on any session of a later week.
+    """
+    b = bars.sort_values("session_date").reset_index(drop=True)
+    w = to_weekly(b)
+    if w.empty:
+        return pd.DataFrame(index=b.index)
+    c = w["close"].astype(float)
+    wk = pd.DataFrame({"week": w["week"], "w_close": c, "w_sma_10": core.sma(c, 10), "w_sma_30": core.sma(c, 30),
+                       "w_rsi_14": core.rsi(c, 14)})
+    wk["w_sma_30_slope_4"] = core.slope_pct(wk["w_sma_30"], 4)
+    sd = pd.to_datetime(b["session_date"])
+    this_week = (sd - pd.to_timedelta(sd.dt.weekday, unit="D")).dt.date
+    closed = sd.dt.weekday >= 4
+    last_prior = this_week.map(lambda x: x - pd.Timedelta(days=7))
+    use_week = pd.Series(np.where(closed, this_week, last_prior), index=b.index)
+    # the last completed week may be earlier still (holiday weeks): take the latest week <= use_week
+    idx = np.searchsorted(np.array(list(wk["week"])), np.array(list(use_week)), side="right") - 1
+    out = wk.iloc[np.clip(idx, 0, None)].reset_index(drop=True)
+    out.loc[idx < 0, :] = np.nan
+    out.index = b.index
+    out["session_date"] = b["session_date"]
+    return out.drop(columns=["week"])

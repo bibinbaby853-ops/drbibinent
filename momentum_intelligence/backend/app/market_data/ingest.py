@@ -217,6 +217,11 @@ def ingest_session(db: Session, provider, d: date, *, symbol_changes: list[Symbo
         issues.append(Issue("source_note", "info", None, d, {"note": note}))
 
     ids, counters = resolve_stocks(db, good, d, source=provider.name, demo=demo, symbol_changes=symbol_changes)
+    if demo and counters["new"]:
+        # synthetic sector labels from the demo provider, so demo mode exercises sector rotation
+        for sec in provider.security_master():
+            db.execute(Stock.__table__.update().where(Stock.key == f"DEMO:{sec.symbol}", Stock.sector.is_(None))
+                       .values(sector=sec.industry, classification_source="demo"))
     n = upsert_candles(db, good, ids, source=provider.name, licence=provider.licence, dataset_id=log_id, demo=demo)
     by_symbol = {r["symbol"]: ids[_stock_key(r, demo)] for r in good.to_dict("records")}
     store_issues(db, issues, source=provider.name, d=d, log_id=log_id, ids_by_symbol=by_symbol)
