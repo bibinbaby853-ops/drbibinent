@@ -456,3 +456,43 @@ class TradeJournal(Base):
     data_as_of: Mapped[date | None] = mapped_column(Date)
     details: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# ---------------------------------------------------------------- Phase 5: strategy signals
+
+class TradeSignal(Base):
+    """One signal lifecycle for a stock (derived data: rebuilt deterministically from a fixed anchor)."""
+
+    __tablename__ = "trade_signals"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    key: Mapped[str] = mapped_column(String(120), unique=True)       # strategy-independent: stock:opened
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"), index=True)
+    symbol: Mapped[str] = mapped_column(String(40))
+    strategy: Mapped[str] = mapped_column(String(20))
+    state: Mapped[str] = mapped_column(String(20))                   # early_warning | potential_setup | confirmed | invalidated | expired
+    is_open: Mapped[bool] = mapped_column(Boolean)
+    opened: Mapped[date] = mapped_column(Date)
+    closed: Mapped[date | None] = mapped_column(Date)
+    confirmed: Mapped[date | None] = mapped_column(Date, index=True)
+    entry: Mapped[float | None] = mapped_column(Float)               # traded (raw) price of the decision session
+    stop: Mapped[float | None] = mapped_column(Float)                # traded-price terms
+    invalidation: Mapped[float | None] = mapped_column(Float)
+    trigger: Mapped[float | None] = mapped_column(Float)
+    reasons: Mapped[dict] = mapped_column(JSONB, default=dict)
+    version: Mapped[str] = mapped_column(String(10))
+    config_hash: Mapped[str] = mapped_column(String(16))
+
+    __table_args__ = (Index("ix_signals_state_open", "state", "is_open"),)
+
+
+class SignalEvent(Base):
+    __tablename__ = "signal_events"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    signal_id: Mapped[int] = mapped_column(ForeignKey("trade_signals.id", ondelete="CASCADE"), index=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    from_state: Mapped[str | None] = mapped_column(String(20))
+    to_state: Mapped[str] = mapped_column(String(20))
+    reason: Mapped[str] = mapped_column(Text)
+    values: Mapped[dict] = mapped_column(JSONB, default=dict)

@@ -288,7 +288,20 @@ def _sell(db, acct, L, d, o_or_kind, p: Position, qty, ref, bps, cfg, reason, or
     return pnl
 
 
-def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig) -> dict:
+def propose_from_signals(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig) -> list[int]:
+    """Turn the strategy signals confirmed on ``d`` into proposals (same interface as manual proposals)."""
+    from ..strategies.pipeline import confirmed_on
+    ids = []
+    for s in confirmed_on(db, d, cfg):
+        if s.entry is None or s.stop is None or s.stop >= s.entry:
+            continue
+        p = propose(db, acct, s.symbol, s.entry, s.stop, strategy=s.strategy, session_date=d,
+                    note=f"signal {s.key}: {s.strategy} confirmed {d}", cfg=cfg)
+        ids.append(p.id)
+    return ids
+
+
+def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig, *, auto_signals: bool = False) -> dict:
     if acct.mode != "paper":
         raise RuntimeError("only paper accounts exist")
     if acct.last_processed is not None and d <= acct.last_processed:
@@ -414,6 +427,8 @@ def run_day(db: Session, acct: PaperAccount, d: date, cfg: StrategyConfig) -> di
                 journal(db, acct, d, "exit_order", o.reason, position_id=int(p.key), order_id=o.id)
 
     # 4. new entries (anything still pending from an earlier session is expired, never executed on stale data)
+    if auto_signals:
+        summary["signal_proposals"] = propose_from_signals(db, acct, d, cfg)
     for stale in db.execute(select(TradeProposal).where(TradeProposal.account_id == acct.id, TradeProposal.status == "pending",
                                                         TradeProposal.session_date < d)).scalars():
         stale.status = "expired"

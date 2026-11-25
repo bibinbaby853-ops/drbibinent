@@ -368,21 +368,45 @@ not depend on where a run starts (tested). History keeps totals and group
 points; the per-check breakdown is stored for the latest sessions and is
 always recomputable.
 
-### 8.5 Strategies (independent, each with its own rules)
+### 8.5 Strategies (`app/strategies/`, independent rule sets on completed daily bars)
 
 | | Breakout | Pullback | Continuation |
 |---|---|---|---|
-| Context | Weekly uptrend; close above 20 and 50 EMA | Daily and weekly uptrend | Strong established trend |
-| Trigger | Close above 20- or 50-day resistance, RVOL >= 1.5, positive RS | Pullback to 20/50 EMA on lighter volume, bullish confirmation bar | Consolidation with volatility contraction, RS strong, renewed volume, price confirmation |
-| Not allowed | Close more than X ATR above breakout level | Close below 50 EMA, distribution day | Extended above 20 EMA |
-| Entry | Next session open, within entry band | Next open after confirmation bar | Next open after expansion bar |
-| Initial stop | Below breakout structure, ATR-bounded | Below pullback swing low / 50 EMA | Below consolidation low |
-| Invalidation | Close back inside base | Close below swing low | Close below consolidation |
-| Exits | Partial at 2R, trail remainder (chandelier / 20 EMA close), time stop 8 weeks | same structure | same structure |
+| Context | Weekly close above a non-falling 30-week SMA (completed weeks); close above 20 and 50 EMA | Weekly uptrend; close above SMA200; EMA20 > EMA50; SMA50 rising | Close > EMA20 > EMA50 > SMA200; ADX >= 20; RS rank >= 80 |
+| Trigger | Close above the prior 20-session high (breakout level = prior 55-session high if cleared, else 20-session) with relative volume >= 1.5 and positive RS (63-session excess > 0, RS rank >= 60) | Low within 1% of EMA20 in the last 5 sessions; those pullback days on volume < 0.9 x 20-day average; bullish confirmation bar (close > open, close > prior high, close > EMA20) | Previous session in volatility contraction (Bollinger-width percentile <= 35 or ATR10/ATR50 <= 0.85) with a 10-session base no wider than max(8%, 3 x ATR%); close above the base high, up on the day, relative volume >= 1.3 |
+| Not allowed | Close more than 1 ATR above the breakout level | Any close below EMA50 in the last 5 sessions; a distribution day (down > 1.5% on > 1.5x average volume) in the last 5 | Close more than 2.5 ATR above EMA20 |
+| Entry | Next session open (paper fill; chase limit 3% in execution) | same | same |
+| Initial stop | Breakout level - 1 ATR | min(5-session swing low, EMA50) - 0.25 ATR | Base low - 0.2 ATR |
+| Invalidation | Close back below the breakout level | Close below the swing low | Close below the base low |
+| Exits | Phase 6 exit plan: 1/3 at 2R, breakeven, chandelier trail (3 ATR from +1.5R), 8-week time stop | same | same |
 
-A stock may carry only one active signal at a time across strategies
-(priority: Breakout, Continuation, Pullback). Signal states: early warning,
-potential setup, confirmed, invalidated, expired.
+Every stop is clamped to between 1 and 3 ATR below the entry. A missing input
+makes a condition false: no data, no signal. Levels are computed on the
+adjusted series and converted to the traded price of the decision session.
+
+**States.** early warning (context and approach, e.g. within 3% of the
+breakout level, or in the pullback zone without confirmation), potential
+setup (trigger met but one confirmation missing: volume or RS), confirmed
+(all conditions; the stock must be eligible that session), invalidated (a
+potential setup closing below its invalidation level), expired (early
+warning 10 / potential setup 5 sessions without progress). A stock carries
+one active signal at a time; the strongest candidate wins, ties by priority
+Breakout > Continuation > Pullback. After a confirmation the stock is in a
+10-session cooldown (duplicate suppression). Confirmed signals become trade
+proposals and pass the regime policy and the risk engine like any other.
+
+Signals are derived data rebuilt from a fixed anchor (the first session with
+relative strength); the rules and the state machine are causal, so a
+session's signals do not change when later data arrives (tested).
+
+**Descriptive check, Jul 2021 - Oct 2026 (in-sample, no costs, stops ignored,
+20 sessions after the next open), signals that pass the regime and score
+gate:** pullback 7,717 (mean +1.18%, median -0.05%, 49.7% positive), breakout
+3,924 (+0.83%, -0.07%, 49.6%), continuation 130 (+0.07%, -0.46%, 47.7%). A
+positive mean from a minority of large winners and no median edge: whether
+the full system (stops, partial exits, trailing, costs, position limits) makes
+money is the Phase 7 question, answered walk-forward rather than by tuning
+these rules on the same data.
 
 ### 8.6 Market regime classifier (`app/scoring/regime.py`)
 Seven components, each scored -2..+2: Nifty 50 trend (weight 2), Nifty 500
@@ -506,7 +530,7 @@ simulation, never as expected returns.
 | `sector_data` | session_date, sector, rank, rank_change, constituents, flags, values | |
 | `market_regime` | session_date, regime, score, coverage, components, policy | |
 | `momentum_scores` | session_date, stock_id, config_hash, total, coverage, band, groups, breakdown (JSONB, recent sessions) | Full sub-check breakdown |
-| `trade_signals` | id, isin, strategy, state, session_date, entry_low/high, stop, targets, reasons (JSONB) | State machine history in `signal_events` |
+| `trade_signals` | id, key, stock_id, strategy, state, is_open, opened, closed, confirmed, entry, stop, invalidation, trigger, reasons, config_hash | State machine history in `signal_events` |
 | `paper_accounts` | id, name, mode ('paper'), initial_capital, cash, realised_pnl, charges, peak_equity, last_processed | One row per paper account |
 | `trade_proposals` | id, account_id, stock_id, strategy, session_date, entry, stop, target, score, status, decision, idempotency_key | Manual now, strategies later |
 | `paper_orders` | id, idempotency_key (unique), proposal_id, position_id, side, kind, qty, reference_price, status, filled_session, fill_price, slippage_bps, charges | |

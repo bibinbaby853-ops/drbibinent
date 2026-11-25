@@ -42,6 +42,7 @@ def main(argv=None) -> int:
             sp.add_argument("--date")
             sp.add_argument("--start")
             sp.add_argument("--end")
+            sp.add_argument("--auto-signals", action="store_true", help="propose each session's confirmed strategy signals")
         if name == "exit":
             sp.add_argument("--position", type=int, required=True)
             sp.add_argument("--reason", required=True)
@@ -89,7 +90,7 @@ def main(argv=None) -> int:
     for d in days:
         with session_scope() as db:
             acct = svc.account_by_name(db, a.name)
-            print(json.dumps(svc.run_day(db, acct, d, cfg), default=str), flush=True)
+            print(json.dumps(svc.run_day(db, acct, d, cfg, auto_signals=a.auto_signals), default=str), flush=True)
     return 0
 
 

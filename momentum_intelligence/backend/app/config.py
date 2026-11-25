@@ -130,6 +130,48 @@ class ExitConfig(BaseModel):
     time_stop_sessions: int = Field(40, ge=1)        # 8 weeks
 
 
+class StrategyRules(BaseModel):
+    """Parameters of the three entry strategies and the signal state machine (Phase 5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: tuple[str, ...] = ("breakout", "continuation", "pullback")   # also the priority order
+    # breakout
+    bo_rvol_min: float = 1.5
+    bo_rs_rank_min: float = 60
+    bo_max_extension_atr: float = 1.0      # close at most this many ATR above the breakout level
+    bo_stop_below_level_atr: float = 1.0
+    bo_early_within_pct: float = 3.0       # early warning: close within this % below the 20-day high
+    # pullback
+    pb_touch_pct: float = 1.0              # low within this % of the 20-day EMA during the last 5 sessions
+    pb_lighter_volume: float = 0.9         # pullback days' average volume < this x 20-day average
+    pb_distribution_drop_pct: float = 1.5  # distribution day: down more than this on > 1.5x average volume
+    pb_stop_buffer_atr: float = 0.25
+    # continuation
+    co_rs_rank_min: float = 80
+    co_adx_min: float = 20
+    co_bb_pctrank_max: float = 35
+    co_atr_ratio_max: float = 0.85
+    co_base_max_pct: float = 8.0           # 10-session base no wider than max(this %, 3 x ATR%)
+    co_rvol_min: float = 1.3
+    co_max_extension_atr: float = 2.5      # close at most this many ATR above the 20-day EMA
+    co_stop_buffer_atr: float = 0.2
+    # common
+    min_stop_atr: float = 1.0              # stop at least this many ATR below the entry ...
+    max_stop_atr: float = 3.0              # ... and at most this many
+    early_expiry_sessions: int = 10
+    potential_expiry_sessions: int = 5
+    cooldown_sessions: int = 10            # no new signal in a stock this long after a confirmed one
+
+    @model_validator(mode="after")
+    def _check(self) -> "StrategyRules":
+        if not set(self.enabled) <= {"breakout", "continuation", "pullback"} or not self.enabled:
+            raise ValueError("enabled strategies must be a non-empty subset of breakout, continuation, pullback")
+        if not 0 < self.min_stop_atr < self.max_stop_atr:
+            raise ValueError("need 0 < min_stop_atr < max_stop_atr")
+        return self
+
+
 Regime = Literal["strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish"]
 REGIMES: tuple[str, ...] = ("strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish")
 
@@ -252,6 +294,7 @@ class StrategyConfig(BaseModel):
     risk: RiskConfig = RiskConfig()
     execution: ExecutionConfig = ExecutionConfig()
     exits: ExitConfig = ExitConfig()
+    strategies: StrategyRules = StrategyRules()
 
     score_weights: ScoreWeights = ScoreWeights()
     score_bands: ScoreBands = ScoreBands()
