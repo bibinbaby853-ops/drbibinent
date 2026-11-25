@@ -496,3 +496,23 @@ class SignalEvent(Base):
     to_state: Mapped[str] = mapped_column(String(20))
     reason: Mapped[str] = mapped_column(Text)
     values: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+# ---------------------------------------------------------------- Phase 7: backtests
+
+class BacktestRun(Base):
+    __tablename__ = "backtest_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(20))          # single | walk_forward | sensitivity
+    start: Mapped[date] = mapped_column(Date)
+    end: Mapped[date] = mapped_column(Date)
+    capital: Mapped[float] = mapped_column(Float)
+    config: Mapped[dict] = mapped_column(JSONB, default=dict)
+    metrics: Mapped[dict] = mapped_column(JSONB, default=dict)
+    equity_curve: Mapped[list] = mapped_column(JSONB, default=list)   # [[date, equity, drawdown_pct], ...]
+    trades: Mapped[list] = mapped_column(JSONB, default=list)
+    details: Mapped[dict] = mapped_column(JSONB, default=dict)        # windows, selections, grid results
+    data_as_of: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

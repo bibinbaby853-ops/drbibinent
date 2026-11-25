@@ -12,6 +12,7 @@ from fastapi import FastAPI
 
 from . import __version__
 from .api.system import router as system_router
+from .api.backtests import router as backtests_router
 from .api.portfolio import router as portfolio_router
 from .api.scoring import router as scoring_router
 from .api.signals import router as signals_router
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(scoring_router)
     app.include_router(portfolio_router)
     app.include_router(signals_router)
+    app.include_router(backtests_router)
     return app
 
 

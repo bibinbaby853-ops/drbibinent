@@ -49,3 +49,12 @@ def test_universe_and_indicator_endpoints_report_missing_data_honestly():
     c = TestClient(create_app())
     r = c.get("/api/v1/stocks/NOSUCHSTOCK/indicators")
     assert r.status_code == 404 and "unknown symbol" in r.json()["detail"]
+
+
+def test_backtest_endpoints_report_missing_runs():
+    from fastapi.testclient import TestClient
+    from app.main import create_app
+    c = TestClient(create_app())
+    assert c.get("/api/v1/backtests/999999").status_code == 404
+    r = c.get("/api/v1/backtests")
+    assert r.status_code == 200 and "Past results" in r.json()["note"]
