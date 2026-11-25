@@ -307,3 +307,152 @@ class MomentumScore(Base):
 
     __table_args__ = (UniqueConstraint("session_date", "stock_id", "version", "config_hash", name="uq_momentum_score"),
                       Index("ix_scores_session_total", "session_date", "total"))
+
+
+# ---------------------------------------------------------------- Phase 6: paper portfolio (PAPER ONLY)
+
+class PaperAccount(Base):
+    __tablename__ = "paper_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), unique=True)
+    mode: Mapped[str] = mapped_column(String(10), default="paper")  # only "paper" exists
+    initial_capital: Mapped[float] = mapped_column(Float)
+    cash: Mapped[float] = mapped_column(Float)
+    realised_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    total_charges: Mapped[float] = mapped_column(Float, default=0.0)
+    gross_bought: Mapped[float] = mapped_column(Float, default=0.0)
+    gross_sold: Mapped[float] = mapped_column(Float, default=0.0)
+    buy_charges_total: Mapped[float] = mapped_column(Float, default=0.0)
+    sell_charges_total: Mapped[float] = mapped_column(Float, default=0.0)
+    peak_equity: Mapped[float] = mapped_column(Float)
+    last_processed: Mapped[date | None] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(40), default="nse_archive")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class TradeProposal(Base):
+    """A proposed entry (manual now; Phase 5 strategies later). Evaluated by the risk engine after the close."""
+
+    __tablename__ = "trade_proposals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("paper_accounts.id", ondelete="CASCADE"), index=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"))
+    symbol: Mapped[str] = mapped_column(String(40))
+    strategy: Mapped[str] = mapped_column(String(30))
+    source: Mapped[str] = mapped_column(String(30), default="manual")
+    session_date: Mapped[date] = mapped_column(Date)
+    entry: Mapped[float] = mapped_column(Float)
+    stop: Mapped[float] = mapped_column(Float)
+    target: Mapped[float | None] = mapped_column(Float)
+    score: Mapped[float | None] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(12), default="pending")  # pending | ordered | rejected
+    decision: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    note: Mapped[str | None] = mapped_column(Text)
+    idempotency_key: Mapped[str] = mapped_column(String(120), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class PaperPosition(Base):
+    __tablename__ = "paper_positions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("paper_accounts.id", ondelete="CASCADE"), index=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"))
+    symbol: Mapped[str] = mapped_column(String(40))
+    sector: Mapped[str] = mapped_column(String(100))
+    strategy: Mapped[str] = mapped_column(String(30))
+    proposal_id: Mapped[int | None] = mapped_column(ForeignKey("trade_proposals.id"))
+    status: Mapped[str] = mapped_column(String(8), default="open")  # open | closed
+    qty: Mapped[int] = mapped_column(Integer)
+    entry_qty: Mapped[int] = mapped_column(Integer)
+    avg_price: Mapped[float] = mapped_column(Float)
+    initial_stop: Mapped[float] = mapped_column(Float)
+    stop: Mapped[float] = mapped_column(Float)
+    target: Mapped[float | None] = mapped_column(Float)
+    initial_risk: Mapped[float] = mapped_column(Float)
+    buy_charges: Mapped[float] = mapped_column(Float, default=0.0)
+    highest_close: Mapped[float] = mapped_column(Float)
+    partial_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    mark: Mapped[float | None] = mapped_column(Float)
+    realised_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    entry_date: Mapped[date] = mapped_column(Date)
+    closed_date: Mapped[date | None] = mapped_column(Date)
+
+
+class PaperOrder(Base):
+    __tablename__ = "paper_orders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("paper_accounts.id", ondelete="CASCADE"), index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+    proposal_id: Mapped[int | None] = mapped_column(ForeignKey("trade_proposals.id"))
+    position_id: Mapped[int | None] = mapped_column(ForeignKey("paper_positions.id"))
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"))
+    symbol: Mapped[str] = mapped_column(String(40))
+    side: Mapped[str] = mapped_column(String(4))        # buy | sell
+    kind: Mapped[str] = mapped_column(String(16))       # entry | stop | partial_target | time_stop | manual_exit
+    qty: Mapped[int] = mapped_column(Integer)
+    reference_price: Mapped[float | None] = mapped_column(Float)
+    created_session: Mapped[date] = mapped_column(Date)
+    expires_after: Mapped[int] = mapped_column(Integer, default=1)  # sessions with no bar before expiry
+    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending | filled | cancelled | expired
+    filled_session: Mapped[date | None] = mapped_column(Date)
+    fill_price: Mapped[float | None] = mapped_column(Float)
+    slippage_bps: Mapped[float | None] = mapped_column(Float)
+    charges: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class PortfolioSnapshot(Base):
+    __tablename__ = "portfolio_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("paper_accounts.id", ondelete="CASCADE"))
+    session_date: Mapped[date] = mapped_column(Date)
+    equity: Mapped[float] = mapped_column(Float)
+    cash: Mapped[float] = mapped_column(Float)
+    invested: Mapped[float] = mapped_column(Float)
+    unrealised_pnl: Mapped[float] = mapped_column(Float)
+    realised_pnl: Mapped[float] = mapped_column(Float)
+    charges: Mapped[float] = mapped_column(Float)
+    peak_equity: Mapped[float] = mapped_column(Float)
+    drawdown_pct: Mapped[float] = mapped_column(Float)
+    open_positions: Mapped[int] = mapped_column(Integer)
+    aggregate_initial_risk: Mapped[float] = mapped_column(Float)
+    exposure: Mapped[dict] = mapped_column(JSONB, default=dict)
+    reconciliation: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    __table_args__ = (UniqueConstraint("account_id", "session_date", name="uq_portfolio_snapshot"),)
+
+
+class RiskEvent(Base):
+    __tablename__ = "risk_events"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("paper_accounts.id", ondelete="CASCADE"), index=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    proposal_id: Mapped[int | None] = mapped_column(ForeignKey("trade_proposals.id"))
+    check: Mapped[str] = mapped_column(String(30))
+    outcome: Mapped[str] = mapped_column(String(10))
+    details: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class TradeJournal(Base):
+    """Audit trail: every state change with its reason and the data session it relied on."""
+
+    __tablename__ = "trade_journal"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("paper_accounts.id", ondelete="CASCADE"), index=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    position_id: Mapped[int | None] = mapped_column(ForeignKey("paper_positions.id"))
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("paper_orders.id"))
+    action: Mapped[str] = mapped_column(String(30))
+    reason: Mapped[str] = mapped_column(Text)
+    data_as_of: Mapped[date | None] = mapped_column(Date)
+    details: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

@@ -63,6 +63,73 @@ class ScoreBands(BaseModel):
         return self
 
 
+class CostConfig(BaseModel):
+    """Indian equity DELIVERY charges (cost model "in-delivery-2024-10"). Percentages in percent units.
+
+    Verify against your broker's contract note; rates change. GST applies to brokerage, exchange
+    transaction charges and the SEBI fee. DP charge is per scrip per sell day, GST included.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: str = "in-delivery-2024-10"
+    brokerage_pct: float = Field(0.0, ge=0)          # many brokers charge 0 for delivery
+    brokerage_cap_inr: float = Field(20.0, ge=0)     # per order, when brokerage_pct > 0
+    stt_pct: float = Field(0.1, ge=0)                # buy and sell
+    exchange_txn_pct: float = Field(0.00297, ge=0)   # NSE, buy and sell
+    sebi_fee_pct: float = Field(0.0001, ge=0)        # Rs 10 per crore, buy and sell
+    stamp_duty_buy_pct: float = Field(0.015, ge=0)   # buy only
+    gst_pct: float = Field(18.0, ge=0)
+    dp_charge_inr: float = Field(15.93, ge=0)        # per scrip per sell day, incl. GST
+
+
+class SlippageConfig(BaseModel):
+    """Fill slippage in basis points by liquidity (median daily traded value, Rs Cr)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    high_liquidity_cr: float = 50
+    medium_liquidity_cr: float = 10
+    high_bps: float = 5
+    medium_bps: float = 10
+    low_bps: float = 20
+
+
+class RiskConfig(BaseModel):
+    """Risk-engine parameters beyond the brief's limits (which live on StrategyConfig)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    max_correlation: float = Field(0.80, gt=0, le=1)   # 60-session daily-return correlation with any open position
+    correlation_lookback: int = Field(60, ge=20)
+    min_stop_atr: float = Field(1.0, ge=0)             # stops tighter than this many ATRs are sized as if this wide
+    max_stop_pct: float = Field(15.0, gt=0)            # stop further than this below entry: rejected
+    gap_lookback: int = Field(250, ge=50)
+    gap_percentile: float = Field(95, gt=50, lt=100)   # size so a gap of this percentile does not exceed the budget
+
+
+class ExecutionConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    max_chase_pct: float = Field(3.0, ge=0)          # entry cancelled if the next open is this far above the planned entry
+    order_expiry_sessions: int = Field(1, ge=1)      # an unfilled entry (stock did not trade) expires
+    slippage: SlippageConfig = SlippageConfig()
+    costs: CostConfig = CostConfig()
+
+
+class ExitConfig(BaseModel):
+    """Default exit plan (Phase 5 strategies may supply their own targets)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    partial_exit_r: float | None = Field(2.0, gt=0)  # take a partial profit at this multiple of initial risk
+    partial_exit_fraction: float = Field(1 / 3, gt=0, lt=1)
+    breakeven_after_partial: bool = True
+    trail_after_r: float = Field(1.5, ge=0)          # start trailing once the close reaches this multiple of risk
+    trail_atr: float = Field(3.0, gt=0)              # chandelier: highest close since entry - trail_atr x ATR
+    time_stop_sessions: int = Field(40, ge=1)        # 8 weeks
+
+
 Regime = Literal["strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish"]
 REGIMES: tuple[str, ...] = ("strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish")
 
@@ -182,6 +249,9 @@ class StrategyConfig(BaseModel):
     universe_rules: UniverseConfig = UniverseConfig()
     relative_strength: RelativeStrengthConfig = RelativeStrengthConfig()
     regime: RegimeConfig = RegimeConfig()
+    risk: RiskConfig = RiskConfig()
+    execution: ExecutionConfig = ExecutionConfig()
+    exits: ExitConfig = ExitConfig()
 
     score_weights: ScoreWeights = ScoreWeights()
     score_bands: ScoreBands = ScoreBands()

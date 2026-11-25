@@ -1,1 +1,1 @@
-"""Not implemented yet. Phase 6: position sizing and the portfolio risk gate."""
+"""Risk engine (Phase 6): every proposed entry passes ``engine.evaluate``; nothing bypasses it."""
