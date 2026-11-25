@@ -503,16 +503,51 @@ unique idempotency key. Every state change writes a `trade_journal` row with
 its reason and the data session it used. Proposals come from the CLI or API
 now and from Phase 5 strategies later, through the same interface.
 
-### 8.9 Backtesting
-An event-driven daily simulator that calls the same strategy, risk and
-execution modules through a simulated clock and point-in-time universe
-snapshots. Ranges: 1, 3, 5 years or custom. Metrics: CAGR, maximum drawdown,
-Sharpe, Sortino, win rate, profit factor, expectancy, average winner and
-loser, holding period, trade count, turnover, and Nifty 50 benchmark.
-Walk-forward (rolling in-sample/out-of-sample windows), out-of-sample hold-out
-and parameter sensitivity grids. Results are stored in `backtest_runs` with
-the exact configuration and data version, and always presented as historical
-simulation, never as expected returns.
+### 8.9 Backtesting (`app/backtesting/`)
+
+An in-memory, event-driven replica of the paper daily cycle (section 8.8), built
+from the same pure functions (risk engine, ledger, exits, charges). **Parity
+is verified on real data**: Jul 2025 - Nov 2026, the backtester and the paper
+engine produced the same 72 trades and the same equity curve to the paisa.
+
+* Data: raw exchange prices for fills, adjusted series for correlation and
+  gap statistics, point-in-time ATR, the point-in-time universe (delisted
+  stocks included: the default run traded IDFC, MINDTREE and MANGCHEFER),
+  confirmed regimes, scores, corporate actions; signals regenerated from cached
+  indicator frames for each strategy variant, from the same anchor as production.
+* No look-ahead: tested by truncation (results up to T identical whether the
+  run stops at T or later) and by replacing all prices after T.
+* Costs and slippage: the paper engine's model (tested: removing costs changes
+  final equity by exactly the charges).
+* Metrics (`metrics.py`, formulas in its docstring, fixture-tested): total
+  return, CAGR, volatility, Sharpe (rf 0 and 6.5%), Sortino, maximum drawdown
+  and duration, Calmar, trade statistics in R, profit factor, exposure,
+  charges, and versus the Nifty 50: beta, alpha, correlation, information ratio.
+* Walk-forward (`walkforward.py`): 12-month in-sample / 6-month out-of-sample
+  windows; 8 candidates (all strategies or without Breakout; 3 or 2 ATR
+  trail; default or strict regime gate) ranked by in-sample Sharpe (at least
+  10 trades, default on ties); the out-of-sample periods run as one continuous
+  account. Only out-of-sample results are evidence.
+* Sensitivity: 16 one-at-a-time variants over the full period.
+* Results are stored in `backtest_runs` with the configuration, metrics,
+  equity curve and trades, and served at `/api/v1/backtests`.
+
+**Results, Jul 2021 - Nov 2026, Rs 1 lakh (historical simulation):**
+
+| Run | Return | Sharpe | Max DD | Trades | Expectancy |
+|---|---|---|---|---|---|
+| Default configuration | -8.9% | -0.34 | 13.4% | 273 | -0.10R |
+| Walk-forward, out-of-sample Jul 2022 - Nov 2026 | +0.9% | 0.07 | 7.4% | 174 | 0.00R |
+| Nifty 50 (price index), same full period | +61.7% | | 17.2% | | |
+
+Sensitivity (full period): only Pullback +4.3% (Sharpe 0.25, max DD 6.3%);
+without Breakout +1.6%; only Breakout -9.7%; regime gate off -1.6% (expectancy
++0.08R but max DD 20.7%); no costs or slippage -4.7%; Rs 10 lakh capital -5.1%;
+risk 1% -19.8%; trailing, partial-exit and time-stop variants -4.7% to -9.3%.
+Average capital deployed is about 15%: 0.5% risk per trade with 1-3 ATR stops
+and at most five positions leaves most of the account in cash, so even a
+positive expectancy could not keep pace with a fully invested index.
+**No configuration tested shows an out-of-sample edge.**
 
 ## 9. Database schema (PostgreSQL, Alembic-managed)
 
