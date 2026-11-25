@@ -61,7 +61,7 @@ def latest_ready() -> pd.DataFrame:
 
     rows = []
     for uni, seg in SEGMENTS.items():
-        files = sorted(glob.glob(str(ROOT / "output" / f"momentum_{uni}_*.csv")))
+        files = sorted(glob.glob(str(ROOT / "output" / f"momentum_{uni}_*.csv")), key=lambda f: Path(f).stat().st_mtime)
         if not files:
             continue
         d = pd.read_csv(files[-1])
@@ -100,7 +100,7 @@ def ready_mode(a) -> None:
 
     # universe reference: the newest full Nifty 500 run, same pattern, in today's kind of context
     ref = None
-    big = sorted(glob.glob(str(ROOT / "output" / "backtest_nifty500_*_trades.csv")))
+    big = sorted(glob.glob(str(ROOT / "output" / "backtest_nifty500_*_trades.csv")), key=lambda f: Path(f).stat().st_mtime)
     if big:
         ref = pd.read_csv(big[-1])
         bc = bench["Close"]

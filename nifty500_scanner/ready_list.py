@@ -43,13 +43,13 @@ def main() -> None:
     a = p.parse_args()
     frames = []
     for uni, seg in SEGMENTS.items():
-        files = sorted(glob.glob(str(ROOT / "output" / f"momentum_{uni}_*.csv")))
+        files = sorted(glob.glob(str(ROOT / "output" / f"momentum_{uni}_*.csv")), key=lambda f: Path(f).stat().st_mtime)
         if files:
             d = pd.read_csv(files[-1])
             d = d[d["Watchlist"] == "READY TO TRADE"].assign(Segment=seg, AsOf=Path(files[-1]).stem.split("_")[2])
             frames.append(d)
     ready = pd.concat(frames, ignore_index=True)
-    bt = sorted(glob.glob(str(ROOT / "output" / "backtest_ready_*[0-9].csv")))
+    bt = sorted(glob.glob(str(ROOT / "output" / "backtest_ready_*[0-9].csv")), key=lambda f: Path(f).stat().st_mtime)
     if bt:
         ev = pd.read_csv(bt[-1]).rename(columns={"Stock": "Symbol"})
         keep = ["Symbol", "SameN", "SameR", "SameNet", "UniR", "Same setup on this stock", "Same setup, Nifty 500, similar conditions", "Verdict"]
