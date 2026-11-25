@@ -31,6 +31,8 @@ def main(argv=None) -> int:
         if name == "init":
             sp.add_argument("--capital", type=float, default=None)
             sp.add_argument("--source", default="nse_archive")
+            sp.add_argument("--profile", help="strategy profile, e.g. D0_baseline, D2_no_breakout_soft_gate, D5_runners_tighter_stops")
+            sp.add_argument("--start-after", help="treat sessions up to this date as processed (forward test starts after it)")
         if name == "propose":
             sp.add_argument("--symbol", required=True)
             sp.add_argument("--entry", type=float, required=True)
@@ -50,8 +52,10 @@ def main(argv=None) -> int:
     cfg = default_strategy_config()
     with session_scope() as db:
         if a.cmd == "init":
-            acct = svc.create_account(db, a.name, a.capital or cfg.simulated_capital_inr, a.source)
-            print(f"paper account {acct.name!r}: Rs {acct.initial_capital:,.0f} ({acct.source})")
+            acct = svc.create_account(db, a.name, a.capital or cfg.simulated_capital_inr, a.source, profile=a.profile)
+            if a.start_after:
+                acct.last_processed = date.fromisoformat(a.start_after)
+            print(f"paper account {acct.name!r}: Rs {acct.initial_capital:,.0f} ({acct.source}, profile {acct.profile or 'effective settings'})")
             return 0
         acct = svc.account_by_name(db, a.name)
         if a.cmd == "propose":
@@ -90,7 +94,7 @@ def main(argv=None) -> int:
     for d in days:
         with session_scope() as db:
             acct = svc.account_by_name(db, a.name)
-            print(json.dumps(svc.run_day(db, acct, d, cfg, auto_signals=a.auto_signals), default=str), flush=True)
+            print(json.dumps(svc.run_day(db, acct, d, svc.account_config(acct, cfg), auto_signals=a.auto_signals), default=str), flush=True)
     return 0
 
 

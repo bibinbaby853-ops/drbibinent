@@ -93,7 +93,7 @@ def build(db: Session, end: date, cfg: StrategyConfig, *, source: str = "nse_arc
             k = ratio.get(d_ref, np.nan)
             k = 1.0 if pd.isna(k) else float(k)
             conv = lambda x: None if x is None else round(x * k, 2)  # noqa: E731
-            key = f"{sid}:{s.opened.isoformat()}"
+            key = f"{h}:{sid}:{s.opened.isoformat()}"  # unique per configuration
             rows.append({"key": key, "stock_id": int(sid), "symbol": symbols.get(sid, str(sid)), "strategy": s.strategy, "state": s.state,
                          "is_open": s.closed is None, "opened": s.opened, "closed": s.closed, "confirmed": s.confirmed,
                          "entry": conv(s.entry), "stop": conv(s.stop), "invalidation": conv(s.invalidation), "trigger": conv(s.trigger),
@@ -112,6 +112,10 @@ def build(db: Session, end: date, cfg: StrategyConfig, *, source: str = "nse_arc
                                 "to_state": e["to_state"], "reason": e["reason"], "values": vals})
         for i in range(0, len(ev_rows), 20_000):
             db.execute(insert(SignalEvent), ev_rows[i:i + 20_000])
+    from ..market_data.base import Lineage, utcnow
+    from ..market_data.ingest import write_lineage
+    write_lineage(db, Lineage("pipeline", "derived", f"signals:{h}", None, utcnow(), end, None, params={"start": start.isoformat()}),
+                  status="success", rows=len(rows))
     db.flush()
     return {"start": start.isoformat(), "end": end.isoformat(), "stocks": len(sids), "signals": len(rows), "by_state": counts,
             "confirmed_on_end": sum(1 for r in rows if r["confirmed"] == end)}
@@ -120,3 +124,10 @@ def build(db: Session, end: date, cfg: StrategyConfig, *, source: str = "nse_arc
 def confirmed_on(db: Session, d: date, cfg: StrategyConfig) -> list[TradeSignal]:
     return db.execute(select(TradeSignal).where(TradeSignal.confirmed == d, TradeSignal.config_hash == strategy_hash(cfg))
                       .order_by(TradeSignal.id)).scalars().all()
+
+
+def built_through(db: Session, cfg: StrategyConfig) -> date | None:
+    """Last session the signals of this configuration were built up to (from the build log)."""
+    from ..models import DataProviderLog
+    return db.scalar(select(func.max(DataProviderLog.as_of)).where(DataProviderLog.dataset == f"signals:{strategy_hash(cfg)}",
+                                                                  DataProviderLog.status == "success"))

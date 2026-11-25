@@ -47,11 +47,21 @@ def market_regime(session_date: date | None = Query(None, alias="date"), history
 
 
 @router.get("/sectors")
-def sectors(session_date: date | None = Query(None, alias="date"), db: Session = Depends(db_session)) -> dict:
+def sectors(session_date: date | None = Query(None, alias="date"), history: int = Query(0, ge=0, le=500),
+            db: Session = Depends(db_session)) -> dict:
     d = _date_or_latest(db, SectorData, session_date)
     rows = db.execute(select(SectorData).where(SectorData.session_date == d)).scalars().all()
     rows.sort(key=lambda r: (r.rank is None, r.rank or 0))
-    return {"session_date": d.isoformat(),
+    hist = {}
+    if history:
+        dates = db.execute(select(SectorData.session_date).where(SectorData.session_date <= d).distinct()
+                           .order_by(SectorData.session_date.desc()).limit(history)).scalars().all()
+        for r in db.execute(select(SectorData.session_date, SectorData.sector, SectorData.rank)
+                            .where(SectorData.session_date.in_(dates), SectorData.rank.is_not(None))).all():
+            hist.setdefault(r.sector, []).append({"time": r.session_date.isoformat(), "rank": r.rank})
+        for v in hist.values():
+            v.sort(key=lambda x: x["time"])
+    return {"session_date": d.isoformat(), "rank_history": hist,
             "method": "equal-weighted composites of each sector's eligible constituents; Unclassified is not ranked",
             "sectors": [{"sector": r.sector, "rank": r.rank, "rank_change": r.rank_change, "constituents": r.constituents,
                          "flags": r.flags, **r.values} for r in rows]}

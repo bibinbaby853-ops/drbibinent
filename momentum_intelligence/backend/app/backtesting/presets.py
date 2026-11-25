@@ -100,3 +100,13 @@ def designs(base: StrategyConfig) -> dict[str, tuple[str, StrategyConfig]]:
         "D5_runners_tighter_stops": ("D3 with stops capped at 2 ATR: more capital deployed within the same 0.5% risk",
                                      _with(d3, strategies=StrategyRules(**{**d3.strategies.model_dump(), "max_stop_atr": 2.0}))),
     }
+
+
+def profile_config(profile: str | None, base: StrategyConfig) -> StrategyConfig:
+    """Configuration for a paper account's strategy profile (forward testing). None -> the base configuration."""
+    if not profile:
+        return base
+    d = designs(base)
+    if profile not in d:
+        raise ValueError(f"unknown profile {profile!r}; choose from {list(d)}")
+    return d[profile][1]

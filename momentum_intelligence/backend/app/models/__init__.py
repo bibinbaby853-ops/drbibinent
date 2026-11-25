@@ -328,6 +328,8 @@ class PaperAccount(Base):
     peak_equity: Mapped[float] = mapped_column(Float)
     last_processed: Mapped[date | None] = mapped_column(Date)
     source: Mapped[str] = mapped_column(String(40), default="nse_archive")
+    # strategy profile (see backtesting.presets.designs); None = the effective dashboard configuration
+    profile: Mapped[str | None] = mapped_column(String(60))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -516,3 +518,20 @@ class BacktestRun(Base):
     details: Mapped[dict] = mapped_column(JSONB, default=dict)        # windows, selections, grid results
     data_as_of: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+
+# ---------------------------------------------------------------- Phase 8: dashboard-editable settings
+
+class AppSetting(Base):
+    """Append-only: every saved configuration is a new row (the audit trail); the latest row is effective."""
+
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(40), index=True)
+    value: Mapped[dict] = mapped_column(JSONB)            # overrides relative to the built-in defaults
+    changes: Mapped[list] = mapped_column(JSONB, default=list)   # [{path, from, to}]
+    note: Mapped[str | None] = mapped_column(Text)
+    updated_by: Mapped[str] = mapped_column(String(60), default="dashboard")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

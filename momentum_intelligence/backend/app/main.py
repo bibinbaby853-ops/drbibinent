@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from . import __version__
 from .api.system import router as system_router
 from .api.backtests import router as backtests_router
+from .api.dashboard import router as dashboard_router
 from .api.portfolio import router as portfolio_router
 from .api.scoring import router as scoring_router
 from .api.signals import router as signals_router
@@ -35,7 +36,30 @@ def create_app() -> FastAPI:
     app.include_router(portfolio_router)
     app.include_router(signals_router)
     app.include_router(backtests_router)
+    app.include_router(dashboard_router)
+    _serve_dashboard(app)
     return app
+
+
+def _serve_dashboard(app: FastAPI) -> None:
+    """Serve the built dashboard (frontend/dist) from the same origin, with SPA fallback for client-side routes."""
+    from pathlib import Path
+
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    dist = Path(get_settings().frontend_dist)
+    if not (dist / "index.html").exists():
+        return  # API-only (dashboard not built); `npm run build` in frontend/
+    app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(404, "not found")
+        f = dist / path
+        return FileResponse(f if path and f.is_file() and dist in f.resolve().parents else dist / "index.html")
 
 
 app = create_app()

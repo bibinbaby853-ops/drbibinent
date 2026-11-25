@@ -44,8 +44,12 @@ class AlreadyProcessed(Exception):
 
 # ---------------------------------------------------------------- accounts and ledger persistence
 
-def create_account(db: Session, name: str, capital: float, source: str = "nse_archive") -> PaperAccount:
-    acct = PaperAccount(name=name, initial_capital=capital, cash=capital, peak_equity=capital, source=source, mode="paper")
+def create_account(db: Session, name: str, capital: float, source: str = "nse_archive", profile: str | None = None) -> PaperAccount:
+    if profile:
+        from ..backtesting.presets import profile_config
+        profile_config(profile, StrategyConfig())  # validates the name
+    acct = PaperAccount(name=name, initial_capital=capital, cash=capital, peak_equity=capital, source=source, mode="paper",
+                        profile=profile)
     db.add(acct)
     db.flush()
     return acct
@@ -485,3 +489,9 @@ def preview(db: Session, acct: PaperAccount, proposal: TradeProposal, cfg: Strat
         return {"decision": next((x for x in out if x["proposal_id"] == proposal.id), None), "checks": risk}
     finally:
         nested.rollback()
+
+
+
+def account_config(acct: PaperAccount, base: StrategyConfig) -> StrategyConfig:
+    from ..backtesting.presets import profile_config
+    return profile_config(acct.profile, base)

@@ -621,16 +621,51 @@ OpenAPI documentation is generated automatically at `/docs`.
 Single-user deployment with a bearer token from the environment; the API is
 not meant to be exposed publicly without a reverse proxy and TLS.
 
-## 11. Frontend
+## 11. Frontend (`frontend/`, Phase 8)
 
-React + TypeScript single-page app built mobile-first (tested at 360 px
-Android widths). Pages: Command Centre, Market Overview, All-Stock Scanner,
-Top 20 Opportunities, Breakout Watchlist, Pullback Watchlist, Sector Rotation,
-Paper Portfolio, Intraday Monitoring, Risk Analytics, Backtesting Lab, Trade
-Journal, AI Daily Report, Settings. Stock cards show symbol, price, data
-timestamp and source, score, RS, RVOL, trend status, setup, entry,
-invalidation, risk/reward and reasons. Charts use `lightweight-charts`
-candlesticks with EMA and volume overlays. No credentials reach the browser.
+React 18 + TypeScript + Vite, `lightweight-charts` 4.2 for candlesticks and
+lines; no other runtime dependencies. Mobile-first (checked at 360 px: every
+page loads without console errors, failed API calls or horizontal scrolling),
+light and dark themes from the system setting. FastAPI serves the built
+`frontend/dist` from the same origin (SPA fallback), so there is no separate
+web server and no CORS. The only credential the browser can hold is the
+user's own dashboard token (Settings page, session storage); broker and AI
+keys never leave the server.
+
+| Page | Data |
+|---|---|
+| Command Centre | regime and entry policy, confirmed setups today, forward-test accounts, evidence (holdout result), highest scores |
+| Market Overview | regime score history, breadth (% above 50/200-day), Nifty 50, regime components |
+| All-Stock Scanner | every snapshot stock with score, RS, RVOL, trend, setup; filters by sector, score, eligibility |
+| Top 20 Opportunities | stock cards for the highest scores |
+| Breakout / Pullback Watchlists | signals grouped by state (confirmed, potential setup, early warning) |
+| Sector Rotation | ranks, rank change, breadth, new highs, flags; rank history chart |
+| Paper Portfolio | per account: equity, cash, P&L, charges, drawdown, reconciliation, positions, pending orders; equity comparison |
+| Intraday Monitoring | **not built** (Phase 9 notice, no simulated data) |
+| Risk Analytics | aggregate risk, invested share, positions and sector exposure against limits; drawdown; risk-engine decision counts |
+| Backtesting Lab | stored runs, metrics, equity curves, sensitivity table, redesign results, walk-forward windows, holdout |
+| Trade Journal | every state change with reason and data date |
+| AI Daily Report | **not built** (Phase 10 notice) |
+| Settings | dashboard token; validated settings form with defaults, saved with an audit history; execution mode locked to paper |
+| Stock detail | candlesticks with EMA 20/50, volume and confirmed-setup markers; full score breakdown; signal history |
+
+Stock cards show symbol, price, data source and session, score and band, RS
+rank and classes, RVOL, trend status, setup with entry, stop, invalidation,
+risk % and 2R target, and the main reasons in plain words.
+
+**Settings** (`PUT /api/v1/settings`): the change is merged into the effective
+configuration and validated by the same model that guards start-up; nothing is
+saved if validation fails. Each save is a new `app_settings` row with the
+changed paths (from -> to) and a note. Changes apply from the next end-of-day
+run; changing universe, scoring or strategy rules produces results under a new
+rule hash, and earlier results stay stored.
+
+**End-of-day pipeline** (`python -m app.scheduler.eod`): ingest, adjustments,
+split confirmation, reference data, indices, universe, scores, signals for
+every configuration in use, and every paper account. Resumable: each step
+checks what is missing rather than assuming. Forward-test accounts `fwd-D0`,
+`fwd-D2`, `fwd-D5` (brief's rules and two redesigns) started after
+2026-11-23 and take their profile's confirmed signals automatically.
 
 ## 12. AI research layer (optional, Phase 10)
 

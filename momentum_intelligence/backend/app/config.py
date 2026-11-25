@@ -338,6 +338,7 @@ class Settings(BaseSettings):
     intraday_provider: Literal["yahoo", "kite", "demo"] = "yahoo"
     # Raw downloads are kept here (data/historical) so a re-ingest never refetches and lineage hashes can be re-verified.
     data_dir: Path = Path(__file__).resolve().parents[2] / "data"
+    frontend_dist: Path = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     # Politeness towards public archives: minimum seconds between requests to one host, and retry policy.
     http_min_interval_s: float = 0.4
     http_max_retries: int = 4
@@ -357,6 +358,40 @@ def get_settings() -> Settings:
     return Settings()
 
 
-@lru_cache
+_CFG_CACHE: dict = {"at": 0.0, "row": None, "cfg": None}
+
+
 def default_strategy_config() -> StrategyConfig:
-    return StrategyConfig()
+    """The effective trading configuration: defaults overlaid with the latest dashboard-saved settings.
+
+    Saved settings live in ``app_settings`` (Phase 8, with an audit trail). If the table is missing or the
+    database is unreachable, the validated defaults apply. Cached for a few seconds.
+    """
+    import time
+    now = time.monotonic()
+    if _CFG_CACHE["cfg"] is not None and now - _CFG_CACHE["at"] < 5:
+        return _CFG_CACHE["cfg"]
+    overrides, row_id = {}, None
+    try:
+        from sqlalchemy import text
+        from .database import get_engine
+        with get_engine().connect() as conn:
+            r = conn.execute(text("select id, value from app_settings where key = 'strategy' order by id desc limit 1")).first()
+        if r is not None:
+            row_id, overrides = r[0], r[1] or {}
+    except Exception:  # noqa: BLE001 - no table yet / no database: defaults
+        pass
+    cfg = StrategyConfig.model_validate(deep_merge(StrategyConfig().model_dump(), overrides)) if overrides else StrategyConfig()
+    _CFG_CACHE.update(at=now, row=row_id, cfg=cfg)
+    return cfg
+
+
+def invalidate_config_cache() -> None:
+    _CFG_CACHE.update(at=0.0, cfg=None)
+
+
+def deep_merge(base: dict, over: dict) -> dict:
+    out = dict(base)
+    for k, v in (over or {}).items():
+        out[k] = deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
