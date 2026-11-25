@@ -50,6 +50,11 @@ def test_infer_ratio_ignores_moves_inside_bands():
     assert infer_ratio(100, 85, 81) is None
 
 
+def test_intraday_crash_is_not_read_as_a_split():
+    # POLICYBZR 24 Sep 2026: opened -10%, closed -36%; an unusual 7:9 ratio would "fit" loosely
+    assert infer_ratio(1886.30, 1697.7, 1207.2) is None
+
+
 def test_adjust_multiplies_prices_before_ex_date_and_preserves_traded_value():
     b = series([100, 102, 51, 52])
     ex = b.session_date[2]
@@ -64,3 +69,18 @@ def test_multiple_factors_compound():
     b = series([400, 200, 100, 100])
     a = adjust(b, [(b.session_date[1], 0.5), (b.session_date[2], 0.5)])
     assert list(a.close) == [100, 100, 100, 100]
+
+
+def test_stale_prev_close_across_a_trading_gap_is_not_applied():
+    # weekly call-auction stock: PREV_CLOSE stays at a base price while trades drift lower
+    b = pd.DataFrame({"session_date": [date(2026, 9, 21), date(2026, 9, 28)], "open": [2.76, 2.7], "high": [2.8, 2.75],
+                      "low": [2.7, 2.65], "close": [2.76, 2.71], "prev_close": [2.86, 2.86], "volume": [100, 100]})
+    ev = derive_factors(b, symbol="X")
+    assert len(ev) == 1 and ev[0].confidence == "low" and ev[0].kind == "price_adjustment"
+
+
+def test_consolidation_across_a_gap_is_kept_with_medium_confidence():
+    b = pd.DataFrame({"session_date": [date(2026, 10, 12), date(2026, 10, 19)], "open": [13.8, 139.0], "high": [14, 140],
+                      "low": [13.5, 137], "close": [13.83, 138.5], "prev_close": [13.9, 138.3], "volume": [100, 10]})
+    ev = derive_factors(b, symbol="X")
+    assert ev[0].factor == 10 and ev[0].kind == "split_or_bonus" and ev[0].confidence == "medium"

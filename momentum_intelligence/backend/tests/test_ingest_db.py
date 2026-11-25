@@ -161,16 +161,27 @@ def test_second_source_confirms_or_rejects_inferred_factor(tmp_path):
         assert db.execute(select(CorporateAction).where(CorporateAction.ex_date == D4)).scalar_one().confidence == "high"
 
 
-def test_disagreeing_second_source_stops_the_factor_being_applied(tmp_path):
+def test_second_source_ratio_that_cannot_explain_the_gap_does_not_override(tmp_path):
     run(provider(tmp_path))
     with session_scope() as db:
-        out = confirm_inferred(db, lambda sym: [(D4, 5.0)], source="nse_archive")
+        out = confirm_inferred(db, lambda sym: [(D4, 2.0)], source="nse_archive")  # 1:2 cannot explain 162.66 -> 17
     assert out["disagreed"] == 1
     with session_scope() as db:
         ca = db.execute(select(CorporateAction).where(CorporateAction.ex_date == D4)).scalar_one()
-        assert ca.confidence == "low"
-        assert candle(db, "DELTA", D1, True).close == pytest.approx(162.65)  # no longer adjusted
+        assert ca.confidence == "medium" and ca.factor == pytest.approx(0.1)
+        assert candle(db, "DELTA", D1, True).close == pytest.approx(16.265)  # still adjusted
         assert count(db, DataQualityIssue, DataQualityIssue.check == "corporate_action_disagreement") == 1
+
+
+def test_second_source_ratio_that_explains_the_gap_replaces_the_inferred_one(tmp_path):
+    run(provider(tmp_path))
+    with session_scope() as db:
+        out = confirm_inferred(db, lambda sym: [(D4, 9.5)], source="nse_archive")  # also fits within the bands
+    assert out["replaced"] == 1
+    with session_scope() as db:
+        ca = db.execute(select(CorporateAction).where(CorporateAction.ex_date == D4)).scalar_one()
+        assert ca.confidence == "high" and ca.factor == pytest.approx(1 / 9.5)
+        assert candle(db, "DELTA", D1, True).close == pytest.approx(162.65 / 9.5)
 
 
 def test_not_yet_published_today_is_not_called_a_holiday(tmp_path):
@@ -179,3 +190,31 @@ def test_not_yet_published_today_is_not_called_a_holiday(tmp_path):
     with session_scope() as db:
         r = ingest_session(db, provider(tmp_path), date(2026, 11, 25), now=datetime(2026, 11, 25, 12, 0, tzinfo=IST))
     assert r.status == "not_published"
+
+
+def _market(n_stocks, d, prev_of, close_of):
+    return [bar(f"S{i:03d}", f"INE{i:03d}X01011", close_of(i), close_of(i) + 1, close_of(i) - 1, close_of(i), prev_of(i), 1000)
+            for i in range(n_stocks)]
+
+
+def test_weekend_special_session_is_ingested(tmp_path):
+    fri, sun, mon = date(2026, 1, 30), date(2026, 2, 1), date(2026, 2, 2)  # Budget-day Sunday session
+    files = {n.udiff_url(fri): zipped("a.csv", udiff_csv(fri, _market(3, fri, lambda i: 100, lambda i: 100))),
+             n.udiff_url(sun): zipped("b.csv", udiff_csv(sun, _market(3, sun, lambda i: 100, lambda i: 110))),
+             n.udiff_url(mon): zipped("c.csv", udiff_csv(mon, _market(3, mon, lambda i: 110, lambda i: 111)))}
+    res = ingest_range(session_scope, n.NSEArchiveProvider(tmp_path, http=FakeHttp(files)), fri, mon)
+    assert [r.status for r in res] == ["ingested", "weekend", "ingested", "ingested"]
+    with session_scope() as db:
+        assert refresh_adjustments(db, source="nse_archive")["factors_new"] == 0
+
+
+def test_market_wide_prev_close_gap_is_a_calendar_problem_not_corporate_actions(tmp_path):
+    fri, mon = date(2026, 1, 30), date(2026, 2, 2)  # the Sunday file is "missing" here
+    files = {n.udiff_url(fri): zipped("a.csv", udiff_csv(fri, _market(40, fri, lambda i: 100, lambda i: 100))),
+             n.udiff_url(mon): zipped("c.csv", udiff_csv(mon, _market(40, mon, lambda i: 110, lambda i: 111)))}
+    ingest_range(session_scope, n.NSEArchiveProvider(tmp_path, http=FakeHttp(files)), fri, mon)
+    with session_scope() as db:
+        out = refresh_adjustments(db, source="nse_archive")
+        assert out["factors_new"] == 0 and out["market_wide_gap_dates"] == [mon.isoformat()]
+        assert count(db, DataQualityIssue, DataQualityIssue.check == "market_wide_prev_close_gap",
+                     DataQualityIssue.severity == "blocking") == 1

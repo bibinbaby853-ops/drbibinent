@@ -102,3 +102,9 @@ def test_intraday_and_index_are_honestly_unavailable(tmp_path):
         p.intraday_bars(["ALPHA"], "15m", D, D)
     with pytest.raises(ProviderUnavailable):
         p.index_bars("NIFTY 50", D, D)
+
+
+def test_rights_entitlements_are_not_equities():
+    rows = ROWS + [bar("ALPHA-RE", "INE000A20011", 1, 1.2, 0.9, 1.1, 1, 500, series="BE"),
+                   bar("ALPHA-RE1", "INE000A20029", 1, 1.2, 0.9, 1.1, 1, 500, series="BE")]
+    assert list(n.parse_udiff(udiff_csv(D, rows), D)["symbol"]) == ["ALPHA", "BETA"]

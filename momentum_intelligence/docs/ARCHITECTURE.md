@@ -198,17 +198,39 @@ Factors come from two rules (`adjustments.py`):
    `PREV_CLOSE(t)` differs from `CLOSE(t-1)` beyond one tick, the ratio is the
    factor, snapped to the exact fraction when tick rounding explains the
    difference.
-2. **Ratio-shaped gap** (confidence medium). Phase 2 found that NSE does
-   **not** always adjust `PREV_CLOSE`: for BNAGROCHEM's 1:10 split on
-   16 Nov 2026 the published previous close was the unadjusted 162.66
-   against an open of 17.00. So a raw move beyond 35% that a common
-   split/bonus ratio brings back inside +-20% (open and close) is recorded
-   as an inferred factor and flagged.
+2. **Ratio-shaped gap** (confidence medium). Phase 2 found that in 2026 NSE
+   did **not** adjust the published `PREV_CLOSE` for any split or bonus found
+   (e.g. BNAGROCHEM 1:10 on 16 Nov 2026: previous close 162.66, open 17.00).
+   So this is the main rule in practice: a raw move beyond 35% that a common
+   split/bonus ratio brings back within +-10% at the open and +-20% at the
+   close is recorded as an inferred factor and flagged. Unusual ratios must
+   fit within 5%. An intraday crash (open near the prior close, close far
+   below) does not qualify.
+
+Across a trading gap of more than 5 days (suspension, weekly call auction)
+a published `PREV_CLOSE` can be a stale base price, so only a clean split
+ratio is trusted there (medium); other gaps are stored with low confidence and
+not applied.
 
 `adjust --confirm-yahoo` checks inferred factors against Yahoo split history
-(unofficial): a match raises confidence to high; a different ratio sets it to
-low, which removes the factor from the adjusted series and raises a warning.
-Confirmation is a second opinion, not a substitute for the exchange record.
+(unofficial): a match raises confidence to high; a different ratio that also
+explains the price gap replaces the inferred one (high); a ratio that does not
+explain the gap (Yahoo often lists only part of a combined split + bonus)
+leaves the inferred factor in place with a warning. Confirmation is a second
+opinion, not a substitute for the exchange record.
+
+**Market-wide guard.** If 25+ stocks (or 5% of a session) show a factor on
+the same date, the previous session is missing from the database and no
+factors are created; a blocking quality issue is raised instead. This caught
+the two 2026 weekend sessions (Budget day 1 Feb, Muhurat trading 8 Nov),
+which is why ingest now probes weekends as well.
+
+**Results on 2026 data (221 sessions, 1 Jan - 23 Nov):** 82 factors; 63
+confirmed by Yahoo, 2 corrected to Yahoo's ratio, 13 applied but
+unconfirmed or disputed (flagged; some are probably demergers such as VEDL on
+30 Apr, where a ratio is only an approximation), 4 stale-price gaps not
+applied. Rights entitlements (`-RE`, `-RE1` symbols in the BE series) are
+excluded from the equity universe.
 
 **Identity.** `stocks.key` is the current ISIN (`DEMO:<symbol>` for demo
 data). A symbol change keeps the row (ISIN unchanged). A split that changes

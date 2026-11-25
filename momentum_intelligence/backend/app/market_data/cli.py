@@ -2,7 +2,7 @@
 
   ingest      --start YYYY-MM-DD --end YYYY-MM-DD   NSE bhavcopies into PostgreSQL (or --demo)
   reference                                          names, sectors, inactive flags from NSE masters
-  adjust      [--confirm-yahoo]                      derive corporate-action factors, write adjusted bars
+  adjust      [--rebuild] [--confirm-yahoo]          derive corporate-action factors, write adjusted bars
   status                                             what is in the database
 """
 
@@ -20,7 +20,7 @@ from ..config import get_settings
 from ..database import session_scope
 from .demo import DemoProvider
 from .http import HttpClient
-from .ingest import confirm_inferred, ingest_range, ingest_reference, refresh_adjustments
+from .ingest import confirm_inferred, ingest_range, ingest_reference, refresh_adjustments, reset_derived_factors
 from .nse_archive import NSEArchiveProvider
 
 
@@ -44,6 +44,8 @@ def cmd_ingest(args) -> int:
             print(f"symbol change list unavailable: {exc}", file=sys.stderr)
 
     def show(r):
+        if r.status == "weekend":
+            return
         extra = f" rows={r.rows} rejected={r.rejected} new={r.new_stocks} sym_chg={r.symbol_changes} isin_chg={r.isin_changes}" if r.status == "ingested" else ""
         print(f"{r.session_date} {r.status:13s}{extra}{' | ' + '; '.join(r.notes) if r.notes else ''}", flush=True)
 
@@ -70,7 +72,10 @@ def cmd_reference(args) -> int:
 def cmd_adjust(args) -> int:
     p = _provider(args)
     with session_scope() as db:
-        out = refresh_adjustments(db, source=p.name)
+        out = {}
+        if args.rebuild:
+            out["factors_deleted"] = reset_derived_factors(db, source=p.name)
+        out.update(refresh_adjustments(db, source=p.name))
     if args.confirm_yahoo and p.name != "demo":
         from .yahoo import YahooProvider
         with session_scope() as db:
@@ -109,6 +114,7 @@ def main(argv=None) -> int:
     sub.add_parser("reference")
     a = sub.add_parser("adjust")
     a.add_argument("--confirm-yahoo", action="store_true", help="check inferred split/bonus factors against Yahoo (unofficial)")
+    a.add_argument("--rebuild", action="store_true", help="delete derived factors and recompute them from raw bars")
     sub.add_parser("status")
     args = ap.parse_args(argv)
     return {"ingest": cmd_ingest, "reference": cmd_reference, "adjust": cmd_adjust, "status": cmd_status}[args.cmd](args)

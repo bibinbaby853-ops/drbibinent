@@ -79,8 +79,12 @@ def _num(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s.replace({"": np.nan, "-": np.nan}), errors="coerce")
 
 
+# Rights entitlements trade in the BE series as SYMBOL-RE / SYMBOL-RE1 ...; they are not shares.
+RIGHTS_ENTITLEMENT = r"-RE\d*$"
+
+
 def _finish(df: pd.DataFrame, session: date) -> pd.DataFrame:
-    df = df[df["series"].isin(EQUITY_SERIES)].copy()
+    df = df[df["series"].isin(EQUITY_SERIES) & ~df["symbol"].str.contains(RIGHTS_ENTITLEMENT, regex=True)].copy()
     df["session_date"] = session
     df["ts"] = session_bar_start(session)
     for c in ("delivery_qty", "delivery_pct"):

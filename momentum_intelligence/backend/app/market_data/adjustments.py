@@ -35,7 +35,9 @@ from .validation import PREV_CLOSE_TOLERANCE
 
 MIN_ABS_GAP = 0.051  # just above one 0.05 tick, so rounding of low-priced stocks is not an "action"
 INFER_MOVE = 0.35     # raw move beyond which a ratio-shaped gap is considered (bands are <= 20%)
-BAND = 0.20
+BAND = 0.20           # the close after applying the ratio must be within the widest price band
+OPEN_BAND = 0.10      # ... and the open closer still: after a split the stock opens near the adjusted price
+UNCOMMON_MAX_RESIDUAL = 0.05  # an unusual ratio is only accepted if it explains the gap almost exactly
 
 
 def _fractions(max_den: int = 20) -> list[tuple[int, int]]:
@@ -62,7 +64,8 @@ def infer_ratio(prior: float, open_: float, close: float) -> tuple[float, str] |
     """Ratio that best explains a gap, as (factor, label); None if the move is ordinary or nothing fits.
 
     Score = mean residual of open and close after applying the ratio, plus a penalty for
-    ratios that are rare in Indian corporate actions. Both residuals must lie within +-20%.
+    ratios that are rare in Indian corporate actions. The adjusted open must lie within +-10%
+    and the close within +-20%; a rare ratio must fit within 5% on average.
     """
     move = close / prior - 1
     if abs(move) < INFER_MOVE:
@@ -73,9 +76,11 @@ def infer_ratio(prior: float, open_: float, close: float) -> tuple[float, str] |
             if (f < 1) != (move < 0):
                 continue
             r_close, r_open = close / (prior * f) - 1, open_ / (prior * f) - 1
-            if abs(r_close) > BAND or abs(r_open) > BAND:
+            if abs(r_close) > BAND or abs(r_open) > OPEN_BAND:
                 continue
             common = any(abs(f - c) < 1e-9 or abs(f - 1 / c) < 1e-9 for c in COMMON_FACTORS)
+            if not common and (abs(r_close) + abs(r_open)) / 2 > UNCOMMON_MAX_RESIDUAL:
+                continue
             score = (abs(r_close) + abs(r_open)) / 2 + (0 if common else UNCOMMON_PENALTY)
             if best is None or score < best[0]:
                 best = (score, f, label)
@@ -112,8 +117,13 @@ def derive_factors(bars: pd.DataFrame, *, symbol: str, isin: str | None = None,
         published_factor = factor
         if exact is not None:
             factor = exact  # the published PREV_CLOSE is rounded to a tick; snap to the ratio it represents
-        # A gap across a missing session (suspension) is lower confidence: the prior close may be stale.
-        confidence = "high" if gap_days <= 5 else "medium"
+        # Across a trading gap (suspension, weekly call auction) the published PREV_CLOSE can be a stale base
+        # price (seen for BZ-series CEREBRAINT, Sep-Oct 2026). Only a clean split ratio is then trusted (medium);
+        # any other gap is recorded with low confidence and not applied.
+        if gap_days <= 5:
+            confidence = "high"
+        else:
+            confidence = "medium" if kind == "split_or_bonus" else "low"
         out.append(CorporateActionEvent(symbol=symbol, isin=isin, ex_date=b.at[i, "session_date"], factor=round(factor, 8),
                                         kind=kind, source=source, confidence=confidence,
                                         details={"prev_close_published": float(pc), "prior_close": float(prior),
@@ -124,7 +134,7 @@ def derive_factors(bars: pd.DataFrame, *, symbol: str, isin: str | None = None,
 
 def _simple_ratio(factor: float, prior: float) -> float | None:
     """The simple fraction (den <= 50) a published factor represents, if tick rounding explains the difference."""
-    if factor >= 0.95 and factor <= 1.05:
+    if 0.85 < factor < 1.15:  # near 1, a tick on a low-priced stock spans many "ratios"; never snap there
         return None
     tol = 0.051 / prior + 1e-9  # one tick on the adjusted price, relative to the prior close
     for num, den in _FRACTIONS:
@@ -155,3 +165,8 @@ def adjust(bars: pd.DataFrame, events: list[tuple[date, float]]) -> pd.DataFrame
         if c in a:
             a[c] = (a[c] / cf).round()
     return a
+
+
+def explains_gap(factor: float, prior: float, open_: float, close: float) -> bool:
+    """Whether a factor brings the post-event open and close back inside the bands around the prior close."""
+    return abs(open_ / (prior * factor) - 1) <= OPEN_BAND and abs(close / (prior * factor) - 1) <= BAND

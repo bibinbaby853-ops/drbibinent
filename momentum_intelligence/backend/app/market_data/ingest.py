@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -27,12 +27,15 @@ from sqlalchemy.orm import Session
 
 from ..models import (CorporateAction, DataProviderLog, DataQualityIssue, MarketCandle, Stock, StockSymbolHistory,
                       TradingSession, utcnow)
-from .adjustments import derive_factors
+from .adjustments import derive_factors, explains_gap
 from .base import BarFrame, DataNotPublished, Lineage, ProviderError, SymbolChange
-from .calendar import bhavcopy_expected, is_weekday, weekdays
+from .calendar import bhavcopy_expected, is_weekday
 from .validation import Issue, blocking_mask, check_session, summarise
 
 log = logging.getLogger(__name__)
+
+MARKET_WIDE_MIN = 25      # at least this many stocks ...
+MARKET_WIDE_SHARE = 0.05  # ... or 5% of the session's stocks with a "factor" on one date = calendar problem
 
 
 @dataclass
@@ -166,11 +169,13 @@ def store_issues(db: Session, issues: list[Issue], *, source: str, d: date, log_
 def ingest_session(db: Session, provider, d: date, *, symbol_changes: list[SymbolChange] | None = None,
                    now: datetime | None = None) -> SessionResult:
     demo = provider.licence == "demo"
-    if not is_weekday(d):
-        return SessionResult(d, "weekend")
+    # Weekends are probed too: NSE holds special weekend sessions (Budget day, Muhurat trading).
+    # Missing them breaks the PREV_CLOSE chain for the whole market on the next session.
     try:
         frame: BarFrame = provider.bhavcopy(d)
     except DataNotPublished as exc:
+        if not is_weekday(d):
+            return SessionResult(d, "weekend")
         status = "holiday" if (demo or bhavcopy_expected(d, now)) else "not_published"
         return SessionResult(d, status, notes=[str(exc)])
     except ProviderError as exc:
@@ -206,7 +211,7 @@ def ingest_session(db: Session, provider, d: date, *, symbol_changes: list[Symbo
 def ingest_range(db_factory, provider, start: date, end: date, *, symbol_changes=None, progress=None) -> list[SessionResult]:
     """Ingest sessions oldest first, one transaction per session (a failure loses only that session)."""
     results = []
-    for d in weekdays(start, end):
+    for d in (start + timedelta(days=i) for i in range((end - start).days + 1)):
         with db_factory() as db:
             res = ingest_session(db, provider, d, symbol_changes=symbol_changes)
         results.append(res)
@@ -255,13 +260,30 @@ def refresh_adjustments(db: Session, *, source: str, stock_ids: list[int] | None
     raw = pd.read_sql(_RAW_SQL, db.connection(), params={"source": source, "ids": stock_ids})
     known = {(r.stock_id, r.ex_date) for r in db.execute(select(CorporateAction.stock_id, CorporateAction.ex_date)
                                                            .where(CorporateAction.source.like(f"{source}:%")))}
-    new_rows, rebuild = [], set()
+    candidates = []
     for sid, g in raw.groupby("stock_id", sort=False):
         for ev in derive_factors(g, symbol=g["symbol"].iat[0], isin=g["isin"].iat[0], source=f"{source}:prev_close"):
             if (sid, ev.ex_date) not in known:
-                new_rows.append({"stock_id": int(sid), "ex_date": ev.ex_date, "kind": ev.kind, "factor": ev.factor,
-                                 "source": ev.source, "confidence": ev.confidence, "details": ev.details})
-                rebuild.add(int(sid))
+                candidates.append((int(sid), ev))
+    # Market-wide guard: corporate actions are rare and independent. If many stocks "have one" on the same
+    # date, the previous session is missing from the database (e.g. an unprobed special session).
+    per_date = pd.Series([ev.ex_date for _, ev in candidates]).value_counts() if candidates else pd.Series(dtype=int)
+    stocks_per_date = raw.groupby("session_date")["stock_id"].nunique()
+    suspicious = {d for d, c in per_date.items() if c >= max(MARKET_WIDE_MIN, MARKET_WIDE_SHARE * stocks_per_date.get(d, 0))}
+    new_rows, rebuild = [], set()
+    for sid, ev in candidates:
+        if ev.ex_date in suspicious:
+            continue
+        new_rows.append({"stock_id": sid, "ex_date": ev.ex_date, "kind": ev.kind, "factor": ev.factor,
+                         "source": ev.source, "confidence": ev.confidence, "details": ev.details})
+        rebuild.add(sid)
+    for d in sorted(suspicious):
+        db.execute(delete(DataQualityIssue).where(DataQualityIssue.source == f"{source}:adjustments",
+                                                  DataQualityIssue.session_date == d,
+                                                  DataQualityIssue.check == "market_wide_prev_close_gap"))
+        db.add(DataQualityIssue(source=f"{source}:adjustments", session_date=d, check="market_wide_prev_close_gap",
+                                severity="blocking", details={"stocks": int(per_date[d]),
+                                                              "note": "previous session probably missing; no factors created"}))
     if new_rows:
         db.execute(insert(CorporateAction).values(new_rows).on_conflict_do_nothing(constraint="uq_corporate_action"))
         inferred = [r for r in new_rows if r["kind"] == "inferred_split_or_bonus"]
@@ -277,7 +299,13 @@ def refresh_adjustments(db: Session, *, source: str, stock_ids: list[int] | None
     if rest is None or rest:
         touched += db.execute(_ADJUST_SQL, {"source": source, "ids": rest, "since": since}).rowcount
     db.flush()
-    return {"factors_new": len(new_rows), "stocks_rebuilt": len(rebuild), "adjusted_rows_written": touched}
+    return {"factors_new": len(new_rows), "stocks_rebuilt": len(rebuild), "adjusted_rows_written": touched,
+            "market_wide_gap_dates": [d.isoformat() for d in sorted(suspicious)]}
+
+
+def reset_derived_factors(db: Session, *, source: str) -> int:
+    """Delete factors derived from this source's bars (they are recomputed from raw data). Returns rows deleted."""
+    return db.execute(delete(CorporateAction).where(CorporateAction.source.like(f"{source}:%"))).rowcount
 
 
 def confirm_inferred(db: Session, splits_lookup, *, source: str, window_days: int = 3, tolerance: float = 0.02) -> dict:
@@ -285,13 +313,16 @@ def confirm_inferred(db: Session, splits_lookup, *, source: str, window_days: in
 
     ``splits_lookup(symbol) -> [(ex_date, shares_multiplier)]`` (Yahoo). Outcomes:
     * matching split within +-window_days and ratio within tolerance -> confidence high
-    * a split with a different ratio -> confidence low (factor no longer applied) and a warning
+    * a split with a different ratio that ALSO explains the price gap -> Yahoo's factor, confidence high
+      (two pieces of evidence agree: the price and the second source)
+    * a different ratio that does NOT explain the gap (Yahoo often lists only part of a combined
+      split + bonus) -> keep the inferred factor at medium and raise a warning
     * no split found -> stays medium, the check is recorded
     Adjusted series are rebuilt for stocks whose applied factors changed.
     """
     rows = db.execute(select(CorporateAction, Stock.symbol).join(Stock, Stock.id == CorporateAction.stock_id)
                       .where(CorporateAction.source == f"{source}:ratio_gap", CorporateAction.confidence == "medium")).all()
-    counts = {"checked": 0, "confirmed": 0, "disagreed": 0, "not_found": 0, "errors": 0}
+    counts = {"checked": 0, "confirmed": 0, "replaced": 0, "disagreed": 0, "not_found": 0, "errors": 0}
     changed: set[int] = set()
     for ca, symbol in rows:
         if (ca.details or {}).get("confirmed_by") or (ca.details or {}).get("second_source_checked"):
@@ -311,17 +342,23 @@ def confirm_inferred(db: Session, splits_lookup, *, source: str, window_days: in
             ca.confidence, details["confirmed_by"] = "high", "yahoo"
             counts["confirmed"] += 1
         else:
-            ca.confidence = "low"
             details["yahoo_multipliers"] = [m for _, m in near]
-            counts["disagreed"] += 1
-            changed.add(ca.stock_id)
-            db.add(DataQualityIssue(source=f"{source}:adjustments", stock_id=ca.stock_id, symbol=symbol, session_date=ca.ex_date,
-                                    check="corporate_action_disagreement", severity="warning",
-                                    details={"inferred_factor": ca.factor, "yahoo_multipliers": [m for _, m in near]}))
+            fits = [1 / m for _, m in near if explains_gap(1 / m, details["prior_close"], details["open"], details["close"])]
+            if fits:
+                details["inferred_factor"] = ca.factor
+                ca.factor, ca.confidence, details["confirmed_by"] = fits[0], "high", "yahoo_ratio"
+                counts["replaced"] += 1
+                changed.add(ca.stock_id)
+            else:
+                counts["disagreed"] += 1
+                db.add(DataQualityIssue(source=f"{source}:adjustments", stock_id=ca.stock_id, symbol=symbol, session_date=ca.ex_date,
+                                        check="corporate_action_disagreement", severity="warning",
+                                        details={"inferred_factor": ca.factor, "yahoo_multipliers": [m for _, m in near],
+                                                 "note": "Yahoo ratio does not explain the price gap; inferred factor kept"}))
         ca.details = details
     db.flush()
     if changed:
-        # The factor is no longer applied: rewrite those stocks' adjusted history.
+        # The applied factor changed: rewrite those stocks' adjusted history.
         db.execute(_ADJUST_SQL, {"source": source, "ids": sorted(changed), "since": None})
     return counts
 
