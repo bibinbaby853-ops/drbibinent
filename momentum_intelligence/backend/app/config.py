@@ -63,6 +63,20 @@ class ScoreBands(BaseModel):
         return self
 
 
+class UniverseConfig(BaseModel):
+    """Eligibility rules for the point-in-time universe (Phase 3). Liquidity settings live on StrategyConfig."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # EQ = normal rolling settlement. BE/BZ are trade-to-trade / non-compliant segments, excluded by default.
+    eligible_series: tuple[str, ...] = ("EQ",)
+    min_history_sessions: int = Field(100, ge=20)        # enough for 50/100-day trends; 200-DMA may still be NaN
+    quality_lookback_sessions: int = Field(20, ge=1)     # no blocking data issue in this window
+    corporate_action_quarantine_sessions: int = Field(252, ge=0)  # ADR-011
+    exclude_gsm: bool = True                             # graded surveillance (where flags are known, ADR-015)
+    unclassified_sector: str = "Unclassified"            # ADR-013
+
+
 class StrategyConfig(BaseModel):
     """Trading configuration (brief section 1, 8 and 12). Percentages are in percent units."""
 
@@ -94,6 +108,7 @@ class StrategyConfig(BaseModel):
 
     min_median_traded_value_cr: float = Field(5.0, ge=0)
     liquidity_lookback_sessions: int = Field(20, ge=5)
+    universe_rules: UniverseConfig = UniverseConfig()
 
     score_weights: ScoreWeights = ScoreWeights()
     score_bands: ScoreBands = ScoreBands()

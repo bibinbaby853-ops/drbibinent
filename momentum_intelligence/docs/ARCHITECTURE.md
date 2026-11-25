@@ -240,14 +240,31 @@ named by `symbolchange.csv` for that day. Every symbol/ISIN a stock has had is
 in `stock_symbol_history`, so back-filling older sessions maps old ISINs to
 the same row.
 
-### 6.5 Survivorship-bias control
+### 6.5 Survivorship-bias control and the point-in-time universe
 
 Each historical NSE bhavcopy lists every security that traded that day,
-including stocks later delisted or renamed. The universe engine rebuilds the
-eligible universe **point in time** for every historical session from those
-files (median traded value, data quality, series) and stores it in
-`stock_universe_snapshots`. Backtests read the snapshot for each simulated
-day, never today's index membership.
+including stocks later delisted or renamed. The universe engine
+(`app/universe/engine.py`, Phase 3) builds a snapshot for any session d from
+data available at d only, one row per stock that traded on d:
+
+| Rule | Default | Reason code |
+|---|---|---|
+| Series | EQ only (BE trade-to-trade and BZ excluded) | `series` |
+| Liquidity | median daily traded value over the last 20 exchange sessions >= Rs 5 Cr; untraded sessions count as zero | `illiquid` |
+| History | >= 100 traded sessions | `insufficient_history` |
+| Data quality | no blocking issue for the stock in the last 20 sessions | `data_quality` |
+| Market data | no market-wide data gap in the last 20 sessions | `market_data_gap` |
+| Corporate actions | no inferred-unconfirmed or disputed factor in the last 252 sessions (ADR-011) | `unconfirmed_corporate_action` |
+| Surveillance | not in GSM, from the latest flag file on or before d (ADR-015) | `surveillance_gsm` |
+
+All thresholds are configurable (`StrategyConfig.universe_rules`,
+`min_median_traded_value_cr`, `liquidity_lookback_sessions`). Rows are keyed
+by a hash of the rules: rebuilding a day with the same rules gives the same
+rows even after later data arrives (tested), and a different rule set is
+stored alongside rather than over it. Sector is the stored classification or
+"Unclassified" (ADR-013); classification is current-only, not point-in-time.
+Backtests read the snapshot for each simulated day, never today's index
+membership.
 
 ### 6.6 Storage layout
 
@@ -275,11 +292,29 @@ date), and records start, end, inputs and outcome.
 ## 8. Domain logic
 
 ### 8.1 Indicators
-EMA 20/50/100/200, SMA 50/200, RSI 14 (Wilder), MACD 12/26/9, ADX 14, ATR 14
-and ATR %, ROC (21/63/126), relative volume (vs 20- and 50-day), 20/50-day
-and 52-week highs, volatility contraction (Bollinger width percentile, ATR
-10/50 ratio), volume expansion. Computed only from completed candles; every
-rolling window is causal. Each indicator has a reference-value test.
+
+Implemented in `app/indicators/` (Phase 3), version `1`:
+
+* Trend: SMA 10/20/50/100/200, EMA 10/20/50/100/200, distance from SMA
+  20/50/200, SMA-50 10-session slope, SMA-200 20-session slope, ADX 14 with
+  +DI/-DI (Wilder)
+* Momentum: RSI 14 (Wilder), MACD 12/26/9, ROC 5/21/63/126/252
+* Volatility: ATR 14 (Wilder) and ATR %, ATR 10/50 ratio, Bollinger 20/2
+  (mid, bands, width, %B), Bollinger-width percentile over 126 sessions,
+  20-day realised volatility, 10-session range %
+* Levels: prior 20/55-session high and low (excluding today, for breakouts),
+  52-week high/low and distance from them
+* Volume: volume SMA 20/50, relative volume vs the prior 20 and 50 sessions,
+  OBV and its 20-session change
+* Weekly (trend timeframe, completed weeks only): close, SMA 10/30, RSI 14,
+  SMA-30 4-week slope
+
+Every window is causal: a test recomputes the panel on data truncated at
+several dates and requires identical values. Reference tests compare against
+the published Wilder RSI example and independent loop implementations (EMA,
+Wilder smoothing, ATR, ADX). Values are NaN until enough history exists.
+Prices are adjusted point-in-time (ADR-014). Snapshots are stored as one JSON
+document per stock and session in `technical_indicators`.
 
 ### 8.2 Relative strength
 Excess return versus Nifty 50, Nifty 500 and the stock's sector index over 1,
@@ -372,7 +407,8 @@ simulation, never as expected returns.
 | `stocks` | id, key (unique: ISIN or DEMO:symbol), isin, symbol, name, series, sector, status, first_seen, last_seen, demo | Symbol/ISIN history in `stock_symbol_history` |
 | `trading_sessions` | (session_date, source) | A date is a session only if the exchange file exists |
 | `data_quality_issues` | source, stock_id, session_date, check, severity, details | Every failed check |
-| `stock_universe_snapshots` | session_date, isin, eligible, reason, median_value_20d, data_quality | Point-in-time universe |
+| `stock_universe_snapshots` | session_date, stock_id, config_hash, eligible, reasons, sector, close, median_value_cr, history_sessions | Point-in-time universe, keyed by rule hash |
+| `surveillance_flags` | stock_id, as_of, price_band_pct, gsm_stage | From NSE sec_list.csv, accumulates daily (ADR-015) |
 | `market_candles` | stock_id, interval, ts, session_date, OHLCV, turnover, trades, delivery, prev_close, source, licence, dataset_id, is_adjusted, demo | Unique (stock_id, interval, ts, is_adjusted, source) |
 | `corporate_actions` | stock_id, ex_date, kind, factor, source, confidence, details | Raw-to-adjusted factors |
 | `technical_indicators` | isin, session_date, name, value, params_hash | Only values used in decisions are persisted |

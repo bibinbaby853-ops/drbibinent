@@ -56,6 +56,7 @@ def full_bhav_url(d: date) -> str:
 EQUITY_L_URL = f"{BASE}/content/equities/EQUITY_L.csv"
 SYMBOL_CHANGE_URL = f"{BASE}/content/equities/symbolchange.csv"
 INDUSTRY_URL = f"{BASE}/content/indices/ind_niftytotalmarket_list.csv"
+SEC_LIST_URL = f"{BASE}/content/equities/sec_list.csv"
 
 
 # ---------------------------------------------------------------- parsers (pure, unit-tested)
@@ -183,6 +184,19 @@ def parse_industry_list(raw_csv: bytes) -> dict[str, str]:
     return {r["ISIN Code"]: r["Industry"] for _, r in df.iterrows() if r.get("ISIN Code")}
 
 
+def parse_sec_list(raw_csv: bytes) -> list[dict]:
+    """Current price band and GSM stage per symbol+series. 'No Band' -> None."""
+    df = _read_csv(raw_csv)
+    out = []
+    for _, r in df.iterrows():
+        band = r.get("Band", "")
+        remark = (r.get("Remarks", "") or "").strip()
+        out.append({"symbol": r["Symbol"], "series": r["Series"],
+                    "price_band_pct": None if band.lower().startswith("no") else pd.to_numeric(band, errors="coerce"),
+                    "gsm_stage": remark.replace("GSM STAGE - ", "") if remark.upper().startswith("GSM") else None})
+    return out
+
+
 # ---------------------------------------------------------------- provider
 
 @dataclass
@@ -273,3 +287,7 @@ class NSEArchiveProvider:
     def industries(self) -> tuple[dict[str, str], Lineage]:
         f = self._fetch("industry", INDUSTRY_URL, f"{date.today():%Y%m%d}.csv", date.today())
         return parse_industry_list(f.raw), f.lineage
+
+    def sec_list(self) -> tuple[list[dict], Lineage]:
+        f = self._fetch("sec_list", SEC_LIST_URL, f"{date.today():%Y%m%d}.csv", date.today())
+        return parse_sec_list(f.raw), f.lineage

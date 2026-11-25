@@ -26,7 +26,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from ..models import (CorporateAction, DataProviderLog, DataQualityIssue, MarketCandle, Stock, StockSymbolHistory,
-                      TradingSession, utcnow)
+                      SurveillanceFlag, TradingSession, utcnow)
 from .adjustments import derive_factors, explains_gap
 from .base import BarFrame, DataNotPublished, Lineage, ProviderError, SymbolChange
 from .calendar import bhavcopy_expected, is_weekday
@@ -95,10 +95,11 @@ def resolve_stocks(db: Session, bars: pd.DataFrame, d: date, *, source: str, dem
     today_keys = set(keys)
     changes_today = {c.new_symbol: c.old_symbol for c in (symbol_changes or []) if c.effective == d}
     out: dict[str, int] = {}
+    pending_history: list[tuple[Stock, str]] = []
+    created: list[Stock] = []
 
     def history(stock: Stock, reason: str):
-        db.execute(insert(StockSymbolHistory).values(stock_id=stock.id, symbol=stock.symbol, isin=stock.isin, valid_from=d,
-                                                     reason=reason, source=source).on_conflict_do_nothing())
+        pending_history.append((stock, reason))
 
     for key, r in keys.items():
         stock = existing.get(key) or past_isin.get(key)
@@ -120,7 +121,7 @@ def resolve_stocks(db: Session, bars: pd.DataFrame, d: date, *, source: str, dem
             stock = Stock(key=key, isin=None if demo else r["isin"], symbol=r["symbol"], series=r["series"], kind="equity",
                           status="active", first_seen=d, last_seen=d, demo=demo)
             db.add(stock)
-            db.flush()
+            created.append(stock)
             existing[key] = stock
             counters["new"] += 1
             history(stock, "first_seen")
@@ -129,8 +130,15 @@ def resolve_stocks(db: Session, bars: pd.DataFrame, d: date, *, source: str, dem
         stock.last_seen = max(stock.last_seen or d, d)
         stock.status = "active"
         by_symbol[stock.symbol] = stock
-        out[key] = stock.id
-    db.flush()
+    db.flush()  # one batched INSERT for all new stocks; ids are assigned here
+    out = {key: existing[key].id if key in existing else None for key in keys}
+    for key in keys:
+        if out[key] is None:  # resolved through a past ISIN
+            out[key] = past_isin[key].id
+    if pending_history:
+        db.execute(insert(StockSymbolHistory).on_conflict_do_nothing(),
+                   [{"stock_id": st.id, "symbol": st.symbol, "isin": st.isin, "valid_from": d, "reason": why, "source": source}
+                    for st, why in pending_history])
     return out, counters
 
 
@@ -149,10 +157,9 @@ def upsert_candles(db: Session, bars: pd.DataFrame, ids: dict[str, int], *, sour
         rows.append(rec)
     if not rows:
         return 0
-    for i in range(0, len(rows), 2000):
-        stmt = insert(MarketCandle).values(rows[i:i + 2000])
-        stmt = stmt.on_conflict_do_update(constraint="uq_candle", set_={c: stmt.excluded[c] for c in cols + ["dataset_id", "fetched_at", "session_date", "licence"]})
-        db.execute(stmt)
+    stmt = insert(MarketCandle)
+    stmt = stmt.on_conflict_do_update(constraint="uq_candle", set_={c: stmt.excluded[c] for c in cols + ["dataset_id", "fetched_at", "session_date", "licence"]})
+    db.execute(stmt, rows)  # executemany: compiled once, sent in batches
     return len(rows)
 
 
@@ -163,7 +170,7 @@ def store_issues(db: Session, issues: list[Issue], *, source: str, d: date, log_
              "details": {k: (v.isoformat() if isinstance(v, (date, datetime)) else v) for k, v in i.details.items()}}
             for i in issues]
     if rows:
-        db.execute(insert(DataQualityIssue).values(rows))
+        db.execute(insert(DataQualityIssue), rows)
 
 
 def ingest_session(db: Session, provider, d: date, *, symbol_changes: list[SymbolChange] | None = None,
@@ -376,9 +383,29 @@ def ingest_reference(db: Session, provider) -> dict:
     for sec in secs:
         st = stocks.get(sec.isin)
         if st is not None:
-            st.name = sec.name
+            st.name, st.listing_date, st.face_value = sec.name, sec.listing_date, sec.face_value
             named += 1
     out["names_updated"] = named
+    try:
+        flags, lin = provider.sec_list()
+        log_id = write_lineage(db, lin, status="success", rows=len(flags))
+        by_sym = {(s.symbol, s.series): s for s in stocks.values() if s.status == "active"}
+        rows = []
+        for f in flags:
+            st = by_sym.get((f["symbol"], f["series"]))
+            if st is not None:
+                band = f["price_band_pct"]
+                rows.append({"stock_id": st.id, "as_of": lin.as_of, "series": f["series"], "source": provider.name,
+                             "price_band_pct": None if band is None or pd.isna(band) else float(band),
+                             "gsm_stage": f["gsm_stage"], "dataset_id": log_id})
+        if rows:
+            stmt = insert(SurveillanceFlag).values(rows)
+            db.execute(stmt.on_conflict_do_update(constraint="uq_surveillance_stock_asof",
+                                                  set_={c: stmt.excluded[c] for c in ("price_band_pct", "gsm_stage", "series", "dataset_id")}))
+        out["surveillance_flags"] = len(rows)
+        out["gsm_flagged"] = sum(1 for r in rows if r["gsm_stage"])
+    except DataNotPublished as exc:
+        out["surveillance_note"] = str(exc)
     try:
         ind, lin = provider.industries()
         write_lineage(db, lin, status="success", rows=len(ind))

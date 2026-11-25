@@ -42,6 +42,8 @@ class Stock(Base):
     industry: Mapped[str | None] = mapped_column(String(150))
     classification_source: Mapped[str | None] = mapped_column(String(60))
     status: Mapped[str] = mapped_column(String(12), default="active")  # active | inactive | delisted
+    listing_date: Mapped[date | None] = mapped_column(Date)
+    face_value: Mapped[float | None] = mapped_column(Float)
     first_seen: Mapped[date | None] = mapped_column(Date)
     last_seen: Mapped[date | None] = mapped_column(Date)
     demo: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -171,3 +173,66 @@ class DataQualityIssue(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (Index("ix_quality_session_check", "session_date", "check"), Index("ix_quality_source_session", "source", "session_date"))
+
+
+class SurveillanceFlag(Base):
+    """Price band and GSM stage as published in NSE sec_list.csv on ``as_of`` (current-only source, ADR-015)."""
+
+    __tablename__ = "surveillance_flags"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"), index=True)
+    as_of: Mapped[date] = mapped_column(Date)
+    price_band_pct: Mapped[float | None] = mapped_column(Float)  # None = no band
+    gsm_stage: Mapped[str | None] = mapped_column(String(20))
+    series: Mapped[str | None] = mapped_column(String(4))
+    source: Mapped[str] = mapped_column(String(40))
+    dataset_id: Mapped[int | None] = mapped_column(ForeignKey("data_provider_logs.id", ondelete="SET NULL"))
+
+    __table_args__ = (UniqueConstraint("stock_id", "as_of", name="uq_surveillance_stock_asof"),)
+
+
+class UniverseSnapshot(Base):
+    """Point-in-time eligibility of every stock that traded on a session, with the reasons."""
+
+    __tablename__ = "stock_universe_snapshots"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"))
+    eligible: Mapped[bool] = mapped_column(Boolean)
+    reasons: Mapped[list] = mapped_column(JSONB, default=list)  # empty when eligible
+    symbol: Mapped[str] = mapped_column(String(40))
+    series: Mapped[str | None] = mapped_column(String(4))
+    sector: Mapped[str] = mapped_column(String(100))
+    close: Mapped[float] = mapped_column(Float)
+    median_value_cr: Mapped[float | None] = mapped_column(Float)
+    history_sessions: Mapped[int] = mapped_column(Integer)
+    config_hash: Mapped[str] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(String(40))
+    demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("session_date", "stock_id", "config_hash", name="uq_universe_snapshot"),
+        Index("ix_universe_session_eligible", "session_date", "eligible"),
+    )
+
+
+class IndicatorSnapshot(Base):
+    """Indicator values for one stock and session (point-in-time adjusted), stored as one JSON document."""
+
+    __tablename__ = "technical_indicators"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"))
+    version: Mapped[str] = mapped_column(String(10))
+    values: Mapped[dict] = mapped_column(JSONB)
+    source: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("session_date", "stock_id", "version", "source", name="uq_indicator_snapshot"),
+        Index("ix_indicators_session", "session_date"),
+    )

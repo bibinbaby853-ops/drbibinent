@@ -12,6 +12,7 @@ from fastapi import FastAPI
 
 from . import __version__
 from .api.system import router as system_router
+from .api.universe import router as universe_router
 from .config import default_strategy_config, get_settings
 
 
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
         description="Positional momentum research and PAPER portfolio management for NSE equities. No live order placement.",
     )
     app.include_router(system_router)
+    app.include_router(universe_router)
     return app
 
 

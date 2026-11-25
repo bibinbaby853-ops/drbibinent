@@ -3,7 +3,7 @@
 Status key: **Accepted** (low-risk default, reversible), **Needs confirmation**
 (owner decision before Phase 2).
 
-## ADR-001 Stack: FastAPI + PostgreSQL + React (Needs confirmation)
+## ADR-001 Stack: FastAPI + PostgreSQL + React (Accepted, confirmed by owner)
 Python backend (FastAPI, SQLAlchemy 2, Alembic, pandas), PostgreSQL 16,
 React + TypeScript + Vite frontend with `lightweight-charts`. Chosen because
 the existing tested analytics are Python, PostgreSQL runs locally here, and
@@ -11,13 +11,13 @@ React gives a responsive Android-friendly UI. Alternative considered: a
 server-rendered Python UI (Streamlit/Dash); rejected because it is weaker for
 a multi-page, mobile, production dashboard.
 
-## ADR-002 Location (Needs confirmation)
+## ADR-002 Location (Accepted, confirmed by owner)
 The platform lives in `momentum_intelligence/` inside the existing
 `drbibinent` repository on branch `claude/nifty-500-stock-scanner-dshdp2`,
 next to the existing `nifty500_scanner/`. A separate repository would be
 cleaner long term; it can be split out later without code changes.
 
-## ADR-003 Market data sources and licensing (Needs confirmation)
+## ADR-003 Market data sources and licensing (Accepted, confirmed by owner)
 * Now: NSE official end-of-day archives (bhavcopy, delivery, security lists,
   index constituents) as the primary daily source; Yahoo Finance for adjusted
   cross-checks, indices, India VIX and delayed 15/60-minute intraday bars.
@@ -60,7 +60,36 @@ The Docker daemon is not available here. Compose and Dockerfiles are written
 and validated statically; local development and tests use the system
 PostgreSQL 16. Container smoke tests must run on the deployment host.
 
-## ADR-010 Authentication (Needs confirmation)
+## ADR-010 Authentication (Accepted, confirmed by owner)
 Single-user deployment protected by a bearer token from the environment,
 intended to sit behind a reverse proxy with TLS. Multi-user accounts are out
 of scope unless requested.
+
+## ADR-011 Unconfirmed corporate actions quarantine a stock (Accepted, confirmed by owner after Phase 2)
+A stock whose look-back window (252 sessions) contains a corporate-action
+factor that is inferred but not confirmed by a second source, or that the
+second source disputes, is not eligible for signals. Its data is still
+stored and shown. Reason code: `unconfirmed_corporate_action`.
+
+## ADR-012 History depth 2021 onward (Accepted, confirmed by owner after Phase 2)
+NSE end-of-day history is loaded from 1 Jan 2021, in date order so identity
+resolution (symbol and ISIN changes) is correct. This gives five years for
+walk-forward backtests.
+
+## ADR-013 Unclassified sector (Accepted, confirmed by owner after Phase 2)
+Stocks without a sector from the reachable NSE classification file are
+grouped as "Unclassified" and that group is capped like any sector (30%).
+Sector rotation analysis excludes the group.
+
+## ADR-014 Point-in-time price adjustment for indicators (Accepted)
+Indicators at session d use prices adjusted only for corporate actions with
+ex-date <= d (levels equal the raw price on d). Back-adjusting with factors
+known only later would leak future information into price-level indicators
+(ATR in rupees, stop levels) during backtests. Stored `is_adjusted` rows
+(adjusted to the latest session) are for charts and current analysis.
+
+## ADR-015 Surveillance flags are current-only (Accepted)
+`sec_list.csv` gives today's price band and GSM stage. ASM lists and history
+live on www.nseindia.com, which is not reachable. Flags are stored by fetch
+date, so they accumulate point-in-time from now on; backtests before that
+cannot apply surveillance filters and say so in their report.

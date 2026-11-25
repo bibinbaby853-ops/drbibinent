@@ -4,9 +4,9 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: Phase 2 complete (market data engine), awaiting confirmation.**
-Scanning, strategies, portfolio, backtesting, dashboard, alerts and AI arrive
-in Phases 3-10. See `docs/PHASES.md`.
+**Status: Phase 3 complete (point-in-time universe and indicators), awaiting
+confirmation.** Scoring, strategies, portfolio, backtesting, dashboard, alerts
+and AI arrive in Phases 4-10. See `docs/PHASES.md`.
 
 ## Documents
 
@@ -22,6 +22,10 @@ in Phases 3-10. See `docs/PHASES.md`.
 * Environment checker and Docker Compose definition (database + API).
 * Market data engine (`backend/app/market_data/`): NSE official end-of-day archives (primary), Yahoo (unofficial; intraday, indices, split cross-check), labelled DEMO data, and a Kite adapter that honestly reports it is unavailable here. Polite HTTP with rate limits and retries, raw file cache with SHA-256 lineage, data-quality checks, ISIN-based identity across symbol and ISIN changes, corporate-action factors and adjusted series, Alembic schema.
 
+* Universe engine (`backend/app/universe/`): point-in-time eligibility for every session with reason codes (series, liquidity, history, data quality, unconfirmed corporate actions, GSM), reproducible snapshots keyed by rule hash.
+* Indicator engine (`backend/app/indicators/`): trend, momentum, volatility, level, volume and weekly indicators, causal and point-in-time adjusted.
+* Read-only API: `GET /api/v1/universe`, `GET /api/v1/stocks/{symbol}/indicators` (bearer token required when `MI_API_TOKEN` is set).
+
 ## Market data commands
 
 ```bash
@@ -32,6 +36,9 @@ python -m app.market_data.cli --live ingest --start 2026-01-01 --end 2026-11-25
 python -m app.market_data.cli --live reference                # names, sectors, inactive flags
 python -m app.market_data.cli --live adjust --confirm-yahoo   # check inferred splits against Yahoo
 python -m app.market_data.cli status
+python -m app.universe.cli snapshot --indicators              # latest session's universe + indicators
+python -m app.universe.cli snapshot --start 2021-06-01 --end 2026-11-23
+python -m app.universe.cli show
 ```
 
 Re-running any command gives the same database state. Downloaded files are
