@@ -20,7 +20,8 @@ from ..strategies.pipeline import strategy_hash
 SOURCES = [
     {"name": "NSE bhavcopy (UDiFF / legacy) and full bhavcopy", "licence": "exchange official, end of day", "used_for": "prices, volumes, delivery, universe"},
     {"name": "NSE EQUITY_L, sec_list, symbolchange, Nifty Total Market list", "licence": "exchange official", "used_for": "names, price bands, GSM, sectors"},
-    {"name": "Yahoo Finance", "licence": "unofficial, delayed", "used_for": "Nifty 50 / Nifty 500 / India VIX levels, split confirmation, intraday candles"},
+    {"name": "NSE official index closes (ind_close_all)", "licence": "exchange official", "used_for": "Nifty 50 / Nifty 500 / India VIX daily levels"},
+    {"name": "Yahoo Finance", "licence": "unofficial, delayed", "used_for": "index levels only where NSE has none, split confirmation, intraday candles"},
     {"name": "Momentum Intelligence computations", "licence": "derived", "used_for": "scores, RS, regime, signals, paper portfolio"},
 ]
 DISCLAIMER = ("Paper trading and research only; not investment advice. Backtests found no out-of-sample edge for these rules; "
@@ -61,7 +62,8 @@ def gather(db: Session, cfg: StrategyConfig, session: date) -> dict:
                           {"d": session}).one()
     return {"session_date": session.isoformat(),
             "regime": None if not reg else {"name": reg.regime, "score": reg.score, "policy": reg.policy,
-                                            "previous": prev.regime if prev else None, "inputs": reg.components.get("inputs")},
+                                            "previous": prev.regime if prev else None, "inputs": reg.components.get("inputs"),
+                                            "benchmark_sources": reg.components.get("benchmark_sources") or {}},
             "universe": {"eligible": universe[0], "traded": universe[1]},
             "sectors_top": [{"sector": s.sector, "rank": s.rank, "rank_change": s.rank_change, "flags": s.flags} for s in secs[:5]],
             "sectors_bottom": [{"sector": s.sector, "rank": s.rank} for s in secs[-3:]],
@@ -84,6 +86,14 @@ def render(kind: str, d: dict, generated: str) -> str:
               f"- New entries: {'allowed, up to ' + str(pol['max_new_entries_per_day']) + ' per day at ' + str(pol['risk_multiplier']) + 'x risk, minimum score ' + str(pol['min_score']) if pol['allow_new_entries'] else 'not allowed'}.",
               f"- Breadth: {_fmt((reg.get('inputs') or {}).get('breadth50_pct'), 1)}% above the 50-day average, "
               f"{_fmt((reg.get('inputs') or {}).get('breadth200_pct'), 1)}% above the 200-day; India VIX {_fmt((reg.get('inputs') or {}).get('vix'))}."]
+        src = reg.get("benchmark_sources") or {}
+        carried = sorted(n for n, o in src.items() if o == "carried")
+        fallback = sorted(n for n, o in src.items() if o == "yahoo")
+        if carried:
+            L.append(f"- Warning: no {', '.join(carried)} close was published for this session; the previous close was "
+                     "carried forward, so regime and relative strength use a stale benchmark value.")
+        if fallback:
+            L.append(f"- {', '.join(fallback)}: NSE's official close was unavailable; Yahoo's (unofficial) value was used.")
     L += [f"- Universe: {d['universe']['eligible']} eligible of {d['universe']['traded']} traded.", "", "## Sectors",
           "Strongest: " + ", ".join(f"{s['rank']}. {s['sector']}" + (f" ({', '.join(f.replace('_', ' ') for f in s['flags'])})" if s['flags'] else "")
                                     for s in d["sectors_top"]),

@@ -152,7 +152,8 @@ These fields are persisted with the rows and shown in the UI and reports.
 | Adjusted daily history | Derived from raw bhavcopy + adjustment factors (6.4) | Yahoo adjusted series | "Adjusted by Momentum Intelligence from NSE data" |
 | Delivery quantity / % | NSE bhavcopy | none (N/A) | "NSE official" |
 | Intraday 15 / 60-minute | Yahoo (unofficial, delayed) | Kite Connect once allowed | "Unofficial, delayed" until a licensed feed is configured |
-| Indices (Nifty 50, Nifty 500, sector indices), India VIX | Yahoo | computed equal-weight sector indices from constituents | per source |
+| Indices (Nifty 50, Nifty 500), India VIX, daily | NSE official index file `ind_close_all_DDMMYYYY.csv` (ADR-018) | Yahoo (unofficial) where NSE has none | "NSE official" / "Yahoo, unofficial" per value |
+| Sector indices | computed equal-weight from constituents | - | "Computed from NSE data" |
 | Security master, series, price bands, GSM | NSE `EQUITY_L.csv`, `sec_list.csv` | none | "NSE official" |
 | Sector classification | NSE index constituent files (industry field) | "Unclassified" | "NSE index classification" |
 | Corporate announcements | not available from this network (NSE API blocked) | none | shown as N/A, never inferred |
@@ -457,8 +458,13 @@ regime changes (an average run of under 5 sessions). Both the raw and the
 confirmed regime are stored.
 
 Deterioration reduces new-entry eligibility; it never force-closes positions
-by itself. Index levels and VIX are Yahoo data (unofficial); breadth, sector
-participation and the RS distribution come from NSE data. The Nifty 50 series
+by itself. Index levels and VIX are NSE's official daily closes (ADR-018; Yahoo
+only where NSE has none); breadth, sector participation and the RS distribution
+come from NSE data. Each regime row records where every benchmark value came
+from (`benchmark_sources`: nse / yahoo / carried); a session with no bar from
+either source takes the previous close for at most 3 sessions and is marked
+`carried`, which the daily report and `/api/health` state. The nightly pipeline
+waits until 22:00 IST for the official file before scoring a session. The Nifty 50 series
 is cross-checked daily against an equal-weighted composite of the 50 most
 liquid eligible NSE stocks (2021-2026: daily-return correlation 0.86; the 4
 days with a gap over 3% were genuine mid-cap selloffs, e.g. 4 June 2024; the 6
@@ -781,11 +787,10 @@ package; the old scanner stays usable until the new one replaces it.
 * Corporate announcements, ASM lists and pledging are not reachable; shown as
   N/A.
 * Historical sector classification is current, not point in time.
-* India VIX history depends on Yahoo availability.
-* Benchmarks (Nifty 50, Nifty 500, India VIX) come from Yahoo, which can lag NSE by a session. Scoring
-  carries a missing index bar forward for up to 3 sessions; this was undocumented until Phase 11 and is now
-  reported by `/api/health`. On 25 Nov 2026 the carried Nifty 50 value was 1.85% below the official close.
-  Switching to NSE's official index file is proposed in ADR-018 (awaiting decision).
+* Until 26 Nov 2026 benchmarks came from Yahoo, which lagged NSE on the latest session and lacks NSE's
+  weekend special sessions; the carried values were undocumented. ADR-018 moved benchmarks to NSE's official
+  index file; recalculating scoring, signals and the forward-test accounts is in progress. Backtest runs stored before
+  then used Yahoo benchmarks and are kept as records.
 * The login throttle and the configuration cache are per process; the deployment runs one API process.
 
 ## 19. Requirements traceability

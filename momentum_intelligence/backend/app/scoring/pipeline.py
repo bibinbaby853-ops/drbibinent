@@ -172,13 +172,23 @@ def run_range(db: Session, start: date, end: date, cfg: StrategyConfig, *, detai
                                             for r in sec_rows])
         db.execute(insert(MarketRegime).values(session_date=d, regime=reg["regime"], score=reg["score"], coverage=reg["coverage"],
                                                components={"components": reg["components"], "inputs": reg["inputs"],
-                                                           "raw_regime": reg["raw_regime"], "confirmation": reg["confirmation"]},
+                                                           "raw_regime": reg["raw_regime"], "confirmation": reg["confirmation"],
+                                                           "benchmark_sources": _origins(panel, d)},
                                                policy=reg["policy"], version=regime_mod.VERSION))
         scored += len(score_rows)
         if progress:
             progress(d, reg, len(score_rows))
     db.flush()
     return RangeResult(len(dates), scored, regimes)
+
+
+def _origins(panel: MarketPanel, d) -> dict:
+    """Where each benchmark value for session d came from: nse, yahoo, carried (ADR-018)."""
+    out = {}
+    for name, o in panel.benchmark_origin.items():
+        v = o.get(d)
+        out[name] = None if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)
+    return out
 
 
 def _jsonable(v):

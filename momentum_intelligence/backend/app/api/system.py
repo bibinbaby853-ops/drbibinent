@@ -39,13 +39,8 @@ def health() -> dict:
         problems.append("no NSE sessions loaded yet (see docs/DEPLOYMENT.md, first data load)")
     elif fresh and fresh["stale"] and s.data_mode == "live":
         problems.append(f"data stale: {fresh['missing_weekdays']} expected sessions missing")
-    if fresh and s.data_mode == "live":
-        behind: dict = {}
-        for name, last in (fresh.get("benchmarks") or {}).items():
-            if latest and (last is None or last < latest):
-                behind.setdefault(last, []).append(name)
-        for last, names in behind.items():
-            problems.append(f"{', '.join(names)} (Yahoo) last {last or 'never'}; carried forward for {latest}")
+    if fresh and s.data_mode == "live" and latest:
+        problems += _benchmark_problems(fresh.get("benchmarks") or {}, latest)
     if jobs and jobs["failures_24h"]:
         problems.append(f"{jobs['failures_24h']} job failure(s) in 24 h")
     return {
@@ -80,19 +75,45 @@ def _freshness(latest) -> dict | None:
 
 
 def _benchmarks() -> dict:
-    """Last stored session per benchmark. Scoring carries a missing index bar forward for up to 3 sessions
-    (scoring/panel.py), so a benchmark behind the latest NSE session means figures use a stale index value."""
+    """Benchmark provenance (ADR-018): the last official NSE close stored per index, the last value from any
+    source, and where the latest regime's values came from (nse / yahoo / carried)."""
     from sqlalchemy import func
     from ..database import _factory
-    from ..models import MarketCandle, Stock
+    from ..models import MarketCandle, MarketRegime, Stock
     names = ("NIFTY 50", "NIFTY 500", "INDIA VIX")
     try:
         with _factory()() as db:
-            rows = dict(db.execute(select(Stock.symbol, func.max(MarketCandle.session_date)).join(MarketCandle, MarketCandle.stock_id == Stock.id)
-                                   .where(Stock.kind == "index", Stock.symbol.in_(names)).group_by(Stock.symbol)).all())
+            def last(source=None):
+                q = (select(Stock.symbol, func.max(MarketCandle.session_date)).join(MarketCandle, MarketCandle.stock_id == Stock.id)
+                     .where(Stock.kind == "index", Stock.symbol.in_(names)))
+                if source:
+                    q = q.where(MarketCandle.source == source)
+                return dict(db.execute(q.group_by(Stock.symbol)).all())
+            official, any_source = last("nse_index"), last()
+            reg = db.execute(select(MarketRegime).order_by(MarketRegime.session_date.desc()).limit(1)).scalars().first()
     except Exception:  # noqa: BLE001
         return {}
-    return {n: rows.get(n) for n in names}
+    return {"official_last": {n: official.get(n) for n in names}, "any_source_last": {n: any_source.get(n) for n in names},
+            "regime_session": reg.session_date if reg else None,
+            "regime_used": (reg.components or {}).get("benchmark_sources") if reg else None}
+
+
+def _benchmark_problems(b: dict, latest) -> list[str]:
+    out = []
+    used, session = b.get("regime_used"), b.get("regime_session")
+    if used and session:
+        carried = sorted(n for n, o in used.items() if o in ("carried", None))
+        if carried:
+            now_official = [n for n in carried if (b.get("official_last") or {}).get(n) and b["official_last"][n] >= session]
+            msg = f"{', '.join(carried)}: no close for {session}; the previous close was carried forward"
+            if now_official:
+                msg += f" (official close now stored: rescore with `python -m app.scoring.cli run --start {session}`)"
+            out.append(msg)
+    else:  # regime rows from before ADR-018 do not record their sources: compare stored dates
+        behind = sorted(n for n, d in (b.get("any_source_last") or {}).items() if d is None or d < latest)
+        if behind:
+            out.append(f"{', '.join(behind)}: no close stored for {latest}; the previous close is carried forward")
+    return out
 
 
 def _jobs() -> dict | None:

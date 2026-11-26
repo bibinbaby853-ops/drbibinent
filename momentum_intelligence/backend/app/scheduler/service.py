@@ -79,6 +79,8 @@ def eod(today: date | None = None) -> dict:
         latest = out.get("latest_session")
         if latest is None or latest < today:
             return {"done": False, "reason": f"no NSE session stored for {today} yet (latest {latest})", **out}
+        if out.get("waiting_for"):
+            return {"done": False, "reason": f"waiting for NSE's official index file for {out['waiting_sessions']}", **out}
         cfg, _ = _configs()
         with session_scope() as db:
             r = generate(db, "post_market", cfg, latest)

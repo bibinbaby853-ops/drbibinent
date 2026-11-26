@@ -9,7 +9,7 @@ Commands run from `momentum_intelligence/` on the server, with the Docker deploy
 |---|---|---|---|
 | 08:30 Mon-Fri | `pre_market` | pre-market report from the last completed session | report stored |
 | 09:30-15:45 Mon-Fri, every 15 min | `intraday` | alerts on completed 15-minute candles (Yahoo, delayed) | one run per slot |
-| 18:00-23:40, every 20 min | `eod` | waits for the NSE bhavcopy, then ingest → universe → scores → signals → paper accounts → post-market report → optional AI commentary | `success` once per session; `skipped` until NSE publishes |
+| 18:00-23:40, every 20 min | `eod` | waits for the NSE bhavcopy, then ingest → official index closes (waits until 22:00 IST for them) → universe → scores → signals → paper accounts → post-market report → optional AI commentary | `success` once per session; `skipped` until NSE publishes |
 
 Each run is recorded in `job_runs` (dashboard **Intraday Monitoring** → jobs, or `GET /api/v1/jobs`). A
 successful run is never repeated for the same session or slot, and a failed step resumes where it stopped on
@@ -28,7 +28,7 @@ curl -s http://127.0.0.1:8000/api/health | python3 -m json.tool
 | `database unreachable` | PostgreSQL down | `docker compose ps`, `docker compose logs db`, `docker compose restart db` |
 | `data stale: N expected sessions missing` | more than 2 weekdays without an NSE session (one holiday is tolerated) | check `eod` runs and `docker compose logs scheduler`; NSE archive reachable? |
 | `N job failure(s) in 24 h` | a job raised an error | `GET /api/v1/jobs` for the error, then the scheduler log; rerun with `once` (below) |
-| `NIFTY 50, NIFTY 500, INDIA VIX (Yahoo) last <date>; carried forward for <date>` | Yahoo has not published the index bar for the latest NSE session; regime and relative strength used the last available value (up to 3 sessions) | clears once Yahoo publishes and the next evening run fetches it, but figures already stored for that session are not recomputed (`docs/DECISIONS.md` ADR-018) |
+| `NIFTY 50: no close for <date>; the previous close was carried forward` | neither NSE's official index file nor Yahoo had a bar when the session was scored (after the 22:00 IST wait); regime and relative strength used the previous close | if the message adds "official close now stored", rescore and rebuild (section 4, "Recalculate after a data correction") |
 
 The dashboard shows the same problems in a banner at the top of every page. For unattended monitoring, point
 an uptime checker at `https://<domain>/api/health` and alert when the body does not contain `"status":"ok"`.
@@ -91,6 +91,21 @@ docker compose exec api python -m app.portfolio.cli show --name fwd-D5          
 docker compose logs --since 24h scheduler | grep -E "ERROR|failed"
 docker compose restart api scheduler
 ```
+
+### Recalculate after a data correction
+
+When stored data for a session was corrected (for example an official index close that arrived late):
+
+```bash
+docker compose exec api python -m app.scoring.cli run --start <first corrected session>
+docker compose exec api python -m app.strategies.cli build          # default settings
+docker compose exec scheduler python -m app.scheduler.service once eod   # rebuilds signals for account profiles
+```
+
+Paper accounts that already traded on the old figures keep their history unless reset:
+`python -m app.portfolio.cli reset --name <account> --start-after <date> --reason "<why>" --yes`, then
+`python -m app.portfolio.cli run --name <account> --auto-signals`. The reset is recorded in the account's
+journal with every discarded order. Take a backup first.
 
 ### Rotate the API token
 

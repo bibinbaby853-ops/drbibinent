@@ -11,7 +11,7 @@ from .deps import Authed, db_session
 
 router = APIRouter(prefix="/api/v1/backtests", dependencies=[Authed], tags=["backtests"])
 NOTE = ("Historical simulation on point-in-time data with next-open fills, slippage and Indian delivery charges. "
-        "Past results do not predict future returns. Benchmark: Nifty 50 price index (unofficial Yahoo data, dividends excluded).")
+        "Past results do not predict future returns. Benchmark: Nifty 50 price index (NSE official closes, Yahoo where missing; dividends excluded). Runs stored before 26 Nov 2026 used Yahoo data.")
 
 
 @router.get("")

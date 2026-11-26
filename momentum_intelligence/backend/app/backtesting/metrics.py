@@ -96,7 +96,7 @@ def benchmark_stats(r: pd.Series, sessions: list[date], bench: pd.Series, start:
     beta = None if not var else r.cov(br) / var
     diff = r - br
     mdd, _ = drawdown(b.reset_index(drop=True))
-    return {"benchmark": "NIFTY 50 (price index, unofficial Yahoo data)", "bench_total_return_pct": _f(tot * 100),
+    return {"benchmark": "NIFTY 50 (price index; NSE official closes, Yahoo where missing)", "bench_total_return_pct": _f(tot * 100),
             "bench_cagr_pct": _f(((1 + tot) ** (1 / years) - 1) * 100), "bench_max_drawdown_pct": _f(mdd * 100),
             "beta": _f(beta), "alpha_annual_pct": _f(None if beta is None else (r.mean() - beta * br.mean()) * 252 * 100),
             "correlation": _f(r.corr(br)), "information_ratio": _f(None if diff.std() == 0 else diff.mean() / diff.std() * math.sqrt(252))}

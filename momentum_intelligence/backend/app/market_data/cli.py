@@ -32,6 +32,13 @@ def _provider(args):
     return NSEArchiveProvider(s.data_dir, http=http, offline=args.offline)
 
 
+def _nse_provider(args) -> NSEArchiveProvider:
+    """The NSE archive provider regardless of --demo (index files only exist there)."""
+    s = get_settings()
+    return NSEArchiveProvider(s.data_dir, http=HttpClient(min_interval_s=s.http_min_interval_s, max_retries=s.http_max_retries),
+                              offline=args.offline)
+
+
 def cmd_ingest(args) -> int:
     p = _provider(args)
     start = date.fromisoformat(args.start) if args.start else date.today() - timedelta(days=args.days)
@@ -85,14 +92,34 @@ def cmd_adjust(args) -> int:
 
 
 def cmd_indices(args) -> int:
-    """Nifty 50, Nifty 500, India VIX daily history from Yahoo (UNOFFICIAL), then a cross-check against NSE data."""
-    from .indices import ingest_indices
+    """Nifty 50, Nifty 500, India VIX daily bars: official NSE index file for every stored NSE session (primary,
+    ADR-018) and Yahoo (UNOFFICIAL, fallback). ``--source`` limits it to one of them."""
+    from sqlalchemy import select
+    from ..models import TradingSession
+    from .indices import ingest_indices, ingest_nse_indices
     from .yahoo import YahooProvider
     start = date.fromisoformat(args.start) if args.start else date(2020, 1, 1)
     end = date.fromisoformat(args.end) if args.end else date.today()
-    with session_scope() as db:
-        out = ingest_indices(db, YahooProvider(), start, end)
-    print(json.dumps({"licence": "unofficial (Yahoo Finance)", "rows": out}, indent=2))
+    out = {}
+    if args.source in ("all", "nse"):
+        p = _nse_provider(args)
+        with session_scope() as db:
+            sessions = db.execute(select(TradingSession.session_date).where(
+                TradingSession.source == "nse_archive", TradingSession.session_date >= start,
+                TradingSession.session_date <= end).order_by(TradingSession.session_date)).scalars().all()
+        done = {"bars": 0, "sessions": 0, "missing": [], "failed": []}
+        for i in range(0, len(sessions), 50):   # commit in chunks: a long backfill survives an interruption
+            with session_scope() as db:
+                r = ingest_nse_indices(db, p, sessions[i:i + 50])
+            for k in ("bars", "sessions"):
+                done[k] += r[k]
+            done["missing"] += r["missing"]
+            done["failed"] += r["failed"]
+        out["nse_official"] = done
+    if args.source in ("all", "yahoo") and not args.offline:
+        with session_scope() as db:
+            out["yahoo_unofficial"] = ingest_indices(db, YahooProvider(), start, end)
+    print(json.dumps(out, indent=2, default=str))
     return 0
 
 
@@ -131,6 +158,7 @@ def main(argv=None) -> int:
     ix = sub.add_parser("indices")
     ix.add_argument("--start")
     ix.add_argument("--end")
+    ix.add_argument("--source", choices=["all", "nse", "yahoo"], default="all")
     args = ap.parse_args(argv)
     return {"ingest": cmd_ingest, "reference": cmd_reference, "adjust": cmd_adjust, "status": cmd_status,
             "indices": cmd_indices}[args.cmd](args)

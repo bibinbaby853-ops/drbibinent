@@ -1,7 +1,8 @@
 """End-of-day pipeline: everything that follows a new NSE bhavcopy, in order, idempotently.
 
 1. ingest new sessions (NSE archives) and refresh adjustments; confirm inferred splits (Yahoo)
-2. reference data (names, sectors, price bands / GSM) and benchmark indices (Yahoo, unofficial)
+2. reference data (names, sectors, price bands / GSM) and benchmark indices: NSE's official index file
+   (primary, ADR-018; scoring waits for it until 22:00 IST) and Yahoo (unofficial fallback)
 3. universe snapshot, scores, RS, sectors, regime for each new session
 4. strategy signals for every configuration in use (effective settings + each account's profile)
 5. every paper account processes the new sessions; accounts with a strategy profile take that
@@ -17,7 +18,7 @@ import argparse
 import json
 import sys
 import time
-from datetime import date, timedelta
+from datetime import date, time as dtime, timedelta
 
 from sqlalchemy import func, select
 
@@ -25,6 +26,16 @@ from ..config import default_strategy_config, get_settings
 from ..database import session_scope
 from ..models import PaperAccount, TradingSession
 from ..universe.engine import build_snapshot
+
+
+# Until this time (IST) a session is not scored without NSE's official index close; after it, scoring proceeds
+# with Yahoo's value or the carried previous close, and the regime and report say so (ADR-018).
+INDEX_WAIT_UNTIL = dtime(22, 0)
+
+
+def wait_for_index(waiting: list, today: date, now) -> bool:
+    """Hold scoring back while today's official index file may still appear."""
+    return bool(waiting) and today == now.date() and now.time() < INDEX_WAIT_UNTIL
 
 
 def log(step, **kw):
@@ -63,6 +74,14 @@ def run(today: date | None = None, *, skip_network: bool = False) -> dict:
                 log("reference", **ingest_reference(db, p))
             with session_scope() as db:
                 log("indices", **ingest_indices(db, YahooProvider(), min(new_sessions) - timedelta(days=10), today))
+        # official index closes for recent sessions that lack them (also catches files published late)
+        from ..market_data.indices import ingest_nse_indices, official_sessions
+        with session_scope() as db:
+            recent = db.execute(select(TradingSession.session_date).where(TradingSession.source == "nse_archive")
+                                .order_by(TradingSession.session_date.desc()).limit(10)).scalars().all()
+            need = sorted(set(recent) - official_sessions(db, recent))
+            if need:
+                log("nse_indices", **ingest_nse_indices(db, p, need))
     if not new_sessions:
         log("no_new_sessions", latest=last)
     # Resumable: work out what is missing for recent sessions instead of trusting "new sessions" alone.
@@ -79,6 +98,16 @@ def run(today: date | None = None, *, skip_network: bool = False) -> dict:
             r = build_snapshot(db, d, cfg)
         log("universe", date=d, eligible=r.eligible, candidates=r.candidates)
     todo = [d for d in recent if d not in have_reg]
+    if todo and not skip_network:
+        from ..market_data.calendar import now_ist
+        from ..market_data.indices import official_sessions
+        with session_scope() as db:
+            waiting = sorted(set(todo) - official_sessions(db, todo))
+        now = now_ist()
+        if wait_for_index(waiting, today, now):
+            log("waiting_for_official_index", sessions=waiting, until=INDEX_WAIT_UNTIL.isoformat())
+            return {"new_sessions": new_sessions, "latest_session": max(recent), "waiting_for": "nse_index",
+                    "waiting_sessions": waiting, "seconds": round(time.time() - t0)}
     if todo:
         from ..scoring.pipeline import run_range
         with session_scope() as db:

@@ -93,6 +93,31 @@ def journal(db, acct, d, action, reason, *, position_id=None, order_id=None, dat
                         reason=reason, data_as_of=data_as_of or d, details=details))
 
 
+def reset_account(db, acct: PaperAccount, start_after: date, reason: str) -> dict:
+    """Clear an account's activity and restart it after ``start_after`` with its original capital and profile.
+
+    Used when the data an account traded on was corrected (ADR-018). The account keeps its id, name and profile;
+    what was discarded is recorded in the journal entry that starts the new history."""
+    from sqlalchemy import delete
+    orders = db.execute(select(PaperOrder).where(PaperOrder.account_id == acct.id).order_by(PaperOrder.id)).scalars().all()
+    discarded = {
+        "orders": [{"symbol": o.symbol, "side": o.side, "kind": o.kind, "qty": o.qty, "status": o.status,
+                    "created_session": str(o.created_session)} for o in orders],
+        "positions": db.scalar(select(func.count()).select_from(PaperPosition).where(PaperPosition.account_id == acct.id)),
+        "proposals": db.scalar(select(func.count()).select_from(TradeProposal).where(TradeProposal.account_id == acct.id)),
+        "previous_last_processed": str(acct.last_processed),
+    }
+    for model in (TradeJournal, RiskEvent, PaperOrder, PaperPosition, TradeProposal, PortfolioSnapshot):
+        db.execute(delete(model).where(model.account_id == acct.id))
+    acct.cash = acct.peak_equity = acct.initial_capital
+    acct.realised_pnl = acct.total_charges = acct.gross_bought = acct.gross_sold = 0.0
+    acct.buy_charges_total = acct.sell_charges_total = 0.0
+    acct.last_processed = start_after
+    db.flush()
+    journal(db, acct, start_after, "account_reset", reason, discarded=discarded)
+    return discarded
+
+
 # ---------------------------------------------------------------- market data helpers
 
 _BARS_ON = text("""select stock_id, open, high, low, close from market_candles

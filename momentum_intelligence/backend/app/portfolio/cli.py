@@ -25,7 +25,7 @@ from . import service as svc
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="portfolio")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("init", "propose", "run", "exit", "show"):
+    for name in ("init", "propose", "run", "exit", "show", "reset"):
         sp = sub.add_parser(name)
         sp.add_argument("--name", default="main")
         if name == "init":
@@ -48,6 +48,10 @@ def main(argv=None) -> int:
         if name == "exit":
             sp.add_argument("--position", type=int, required=True)
             sp.add_argument("--reason", required=True)
+        if name == "reset":
+            sp.add_argument("--start-after", required=True, help="the account restarts with the session after this date")
+            sp.add_argument("--reason", required=True)
+            sp.add_argument("--yes", action="store_true", help="confirm: this deletes the account's orders, positions and history")
     a = ap.parse_args(argv)
     cfg = default_strategy_config()
     with session_scope() as db:
@@ -64,6 +68,13 @@ def main(argv=None) -> int:
             out = {"proposal_id": p.id, "symbol": p.symbol, "session": p.session_date.isoformat(), "status": p.status,
                    "decision": p.decision}
             print(json.dumps(out, indent=2, default=str))
+            return 0
+        if a.cmd == "reset":
+            if not a.yes:
+                print("refusing without --yes: reset deletes this account's orders, positions and history", file=sys.stderr)
+                return 2
+            out = svc.reset_account(db, acct, date.fromisoformat(a.start_after), a.reason)
+            print(json.dumps({"account": acct.name, "restarts_after": a.start_after, "discarded": out}, indent=2, default=str))
             return 0
         if a.cmd == "exit":
             o = svc.manual_exit(db, acct, a.position, a.reason)

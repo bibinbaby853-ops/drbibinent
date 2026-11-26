@@ -17,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ..config import StrategyConfig
-from ..market_data.indices import DEMO_BENCHMARK, index_closes
+from ..market_data.indices import BENCHMARKS, DEMO_BENCHMARK, benchmark, index_closes
 from ..universe.engine import config_hash
 
 _SESSIONS = text("select session_date from trading_sessions where source = :src and session_date <= :end order by 1")
@@ -46,12 +46,27 @@ class MarketPanel:
     sector: pd.Series               # stock_id -> sector label (current classification, ADR-013)
     benchmarks: dict[str, pd.Series] = field(default_factory=dict)
     source: str = "nse_archive"
+    # per benchmark and session: 'nse' (official), 'yahoo' (fallback), 'carried' (no bar; previous value used)
+    benchmark_origin: dict[str, pd.Series] = field(default_factory=dict)
 
     def bars(self, sid: int) -> pd.DataFrame:
         df = pd.DataFrame({"open": self.open[sid], "high": self.high[sid], "low": self.low[sid],
                            "close": self.close[sid], "volume": self.volume[sid]}).dropna(subset=["close"])
         df.index.name = "session_date"
         return df.reset_index()
+
+
+CARRY_LIMIT = 3   # sessions a missing index bar may be carried forward
+
+
+def align_benchmark(close: pd.Series, origin: pd.Series, sessions: list) -> tuple[pd.Series, pd.Series]:
+    """Benchmark closes on the NSE session calendar. A session with no bar from any source takes the previous
+    close for up to CARRY_LIMIT sessions and is marked 'carried'; beyond that it stays missing."""
+    raw = close.reindex(sessions)
+    filled = raw.ffill(limit=CARRY_LIMIT)
+    o = origin.reindex(sessions).astype(object)
+    o[raw.isna() & filled.notna()] = "carried"
+    return filled, o
 
 
 def load_panel(db: Session, start: date, end: date, cfg: StrategyConfig, *, lookback: int = 420,
@@ -73,12 +88,15 @@ def load_panel(db: Session, start: date, end: date, cfg: StrategyConfig, *, look
     med = med.reindex(columns=close.columns)
     sector = uni.drop_duplicates("stock_id", keep="last").set_index("stock_id")["sector"].reindex(close.columns)
     sector = sector.fillna(cfg.universe_rules.unclassified_sector)
-    bench = {}
-    names = {"NIFTY 50": ("NIFTY 50", "yahoo"), "NIFTY 500": ("NIFTY 500", "yahoo"), "INDIA VIX": ("INDIA VIX", "yahoo")}
+    bench, origin = {}, {}
     if source == "demo":  # demo data is benchmarked against the synthetic demo index only
-        names = {"NIFTY 50": (DEMO_BENCHMARK, "demo")}
-    for name, (stored, src) in names.items():
-        s = index_closes(db, stored, source=src)
+        s = index_closes(db, DEMO_BENCHMARK, source="demo")
         if not s.empty:
-            bench[name] = s.reindex(sessions).ffill(limit=3)  # an index bar missing for an NSE session: carry briefly
-    return MarketPanel(sessions, wide("open"), wide("high"), wide("low"), close, wide("volume"), elig, med, sector, bench, source)
+            bench["NIFTY 50"] = s.reindex(sessions).ffill(limit=3)
+            origin["NIFTY 50"] = pd.Series("demo", index=sessions, dtype=object)
+    else:
+        for name in BENCHMARKS:
+            s, o = benchmark(db, name)
+            if not s.empty:
+                bench[name], origin[name] = align_benchmark(s, o, sessions)
+    return MarketPanel(sessions, wide("open"), wide("high"), wide("low"), close, wide("volume"), elig, med, sector, bench, source, origin)

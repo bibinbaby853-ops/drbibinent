@@ -1,9 +1,15 @@
-"""Benchmark indices (Nifty 50, Nifty 500, India VIX) from Yahoo: UNOFFICIAL, labelled as such.
+"""Benchmark indices (Nifty 50, Nifty 500, India VIX).
 
-Stored as ``stocks`` rows with ``kind='index'`` and key ``INDEX:<name>``, candles with
-``source='yahoo'``, ``licence='unofficial'``. ``check_benchmark`` compares the
-Nifty 50 against a composite of the 50 most liquid eligible NSE stocks built
-from exchange data, and records days where they disagree.
+Two sources, stored side by side on the same ``stocks`` row (``kind='index'``, key ``INDEX:<name>``):
+
+* ``source='nse_index'``: NSE's official daily index file (``ind_close_all``), licence exchange_official.
+  Primary since ADR-018.
+* ``source='yahoo'``: Yahoo Finance, UNOFFICIAL. Fallback for any session the official file lacks, and the
+  only source for intraday index data.
+
+``benchmark()`` combines them (official first) and says where each value came from. ``check_benchmark``
+compares the Nifty 50 against a composite of the 50 most liquid eligible NSE stocks built from exchange data,
+and records days where they disagree.
 """
 
 from __future__ import annotations
@@ -53,6 +59,38 @@ def ingest_indices(db: Session, yahoo, start: date, end: date, names=BENCHMARKS)
     return out
 
 
+def ingest_nse_indices(db: Session, provider, sessions, names=BENCHMARKS) -> dict:
+    """Official index bars for each session from NSE's ind_close_all file. Missing files are reported, not guessed."""
+    from .base import DataNotPublished, ProviderError
+    ids = {f"INDEX:{n}": ensure_index(db, n) for n in names}
+    stored, missing, failed = 0, [], []
+    for d in sessions:
+        try:
+            f = provider.index_closes(d)
+        except DataNotPublished:
+            missing.append(d.isoformat())
+            continue
+        except ProviderError as exc:
+            failed.append(f"{d}: {exc}")
+            continue
+        bars = f.data[f.data["symbol"].isin(names)].copy()
+        log_id = write_lineage(db, f.lineage[0], status="success", rows=len(bars))
+        bars["isin"] = "INDEX:" + bars["symbol"]
+        bars["series"] = None
+        stored += upsert_candles(db, bars, ids, source="nse_index", licence="exchange_official", dataset_id=log_id, demo=False)
+    db.flush()
+    return {"bars": stored, "sessions": len(sessions), "missing": missing, "failed": failed}
+
+
+def official_sessions(db: Session, sessions, name: str = "NIFTY 50") -> set:
+    """Which of ``sessions`` already have the official NSE bar for ``name``."""
+    if not sessions:
+        return set()
+    rows = db.execute(text("""select c.session_date from market_candles c join stocks s on s.id = c.stock_id
+        where s.key = :k and c.source = 'nse_index' and c.session_date = any(:d)"""), {"k": f"INDEX:{name}", "d": list(sessions)})
+    return {r[0] for r in rows}
+
+
 _BENCH = text("""
     select c.session_date, c.close from market_candles c join stocks s on s.id = c.stock_id
     where s.key = :key and c.source = :src and c.interval = '1d' order by c.session_date
@@ -64,6 +102,24 @@ DEMO_BENCHMARK = "DEMO INDEX"  # stands in for NIFTY 50 in demo mode only; alway
 def index_closes(db: Session, name: str, *, source: str = "yahoo") -> pd.Series:
     df = pd.read_sql(_BENCH, db.connection(), params={"key": f"INDEX:{name}", "src": source})
     return df.set_index("session_date")["close"] if not df.empty else pd.Series(dtype=float)
+
+
+BENCHMARK_SOURCES = ("nse_index", "yahoo")   # order of preference
+
+
+def benchmark(db: Session, name: str) -> tuple[pd.Series, pd.Series]:
+    """Closes for one benchmark, official NSE values first and Yahoo only where NSE has none.
+
+    Returns (close, origin) indexed by session date; origin is 'nse' or 'yahoo' per date."""
+    closes, origin = pd.Series(dtype=float), pd.Series(dtype=object)
+    for src in BENCHMARK_SOURCES:
+        s = index_closes(db, name, source=src)
+        if s.empty:
+            continue
+        new = s[~s.index.isin(closes.index)]
+        closes = pd.concat([closes, new])
+        origin = pd.concat([origin, pd.Series("nse" if src == "nse_index" else "yahoo", index=new.index, dtype=object)])
+    return closes.sort_index(), origin.sort_index()
 
 
 def ingest_demo_index(db: Session, demo, start: date, end: date) -> int:
@@ -86,7 +142,7 @@ def check_benchmark(db: Session, panel_close: pd.DataFrame, eligible: pd.DataFra
     panel_close: dates x stock_id adjusted closes; eligible: dates x stock_id median traded value (NaN = not eligible).
     Records a warning for each day where the two returns differ by more than ``tolerance``.
     """
-    nifty = index_closes(db, "NIFTY 50")
+    nifty, _ = benchmark(db, "NIFTY 50")
     if nifty.empty:
         return {"status": "no_benchmark"}
     rets = panel_close.pct_change(fill_method=None)
@@ -103,7 +159,7 @@ def check_benchmark(db: Session, panel_close: pd.DataFrame, eligible: pd.DataFra
              "severity": "warning", "details": {"nifty_return": round(float(r.nifty), 5), "composite_return": round(float(r.composite), 5)}}
             for d, r in bad.iterrows()]
     rows += [{"source": "yahoo:benchmark", "symbol": "NIFTY 50", "session_date": d, "check": "benchmark_missing_session",
-              "severity": "warning", "details": {"note": "NSE session with no Yahoo Nifty 50 bar"}} for d in missing]
+              "severity": "warning", "details": {"note": "NSE session with no Nifty 50 bar from NSE or Yahoo"}} for d in missing]
     db.execute(text("delete from data_quality_issues where source = 'yahoo:benchmark'"))
     if rows:
         db.execute(insert(DataQualityIssue), rows)

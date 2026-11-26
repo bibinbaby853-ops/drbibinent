@@ -112,7 +112,7 @@ suite runs inside the built image, because a version change (pandas 3.1) broke E
 Backups are proved by restoring into a separate database and comparing per-table content fingerprints, not by
 the restore tool's exit code.
 
-## ADR-018 Official NSE index closes for benchmarks (Proposed, awaiting owner decision)
+## ADR-018 Official NSE index closes for benchmarks (Accepted 26 Nov 2026: switch and recalculate)
 Found in Phase 11: Yahoo had not published the 25 Nov 2026 index bars, so scoring carried the 23 Nov values
 forward (Nifty 50 25,349.65; the official close was 25,819.25, +1.85%) while reporting full coverage. In
 2021-2026 this happened on 6 of 1,362 sessions, all special weekend sessions, plus the latest session now.
@@ -122,3 +122,10 @@ gaps, mark any carried value in the regime's coverage, and recompute regime, rel
 sessions that used a carried value. Recomputing 25 Nov would change inputs to orders already queued for the
 forward-test accounts, so the owner decides whether to recompute that day or apply the change from the next
 session only.
+
+Decision (owner, 26 Nov 2026): switch and recalculate. Implemented: `ind_close_all` is fetched for every
+session (backfilled from June 2021) and preferred over Yahoo; every regime row records `benchmark_sources`;
+the nightly pipeline waits until 22:00 IST for the official file. In progress: recomputing scoring and signals
+for the full history and resetting the three forward-test accounts to start after 23 Nov 2026 (the discarded
+orders are recorded in each account's journal). Phase 6/7 replay and exercise accounts and stored backtest
+runs were not recomputed; they are records of runs on the earlier data.

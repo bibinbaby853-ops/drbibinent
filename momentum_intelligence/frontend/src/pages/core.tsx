@@ -70,7 +70,7 @@ export function MarketOverview() {
               <LineChart series={[{ name: "> 50-day", data: h.map((x: any) => ({ time: x.time, value: x.breadth50 })) },
                                   { name: "> 200-day", data: h.map((x: any) => ({ time: x.time, value: x.breadth200 })) }]} />
             </Card>
-            <Card title="Nifty 50 (Yahoo, unofficial)">
+            <Card title="Nifty 50 (NSE official close)">
               <LineChart series={[{ name: "Nifty 50", data: data.nifty }]} />
             </Card>
             <Card title="Components today">

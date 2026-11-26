@@ -10,6 +10,8 @@ Files used (all public, published by the exchange):
 * ``content/equities/EQUITY_L.csv``: listed equities with ISIN, listing date, face value.
 * ``content/equities/symbolchange.csv``: historical symbol changes.
 * ``content/indices/ind_niftytotalmarket_list.csv``: industry classification for Nifty Total Market.
+* ``content/indices/ind_close_all_DDMMYYYY.csv``: official OHLC of every NSE index for one session, used for
+  the Nifty 50 / Nifty 500 / India VIX benchmarks (ADR-018). Published for special weekend sessions too.
 
 The bhavcopy (UDiFF or legacy) is the primary record because it carries ISIN;
 the full bhavcopy is merged in for delivery figures. ``PREV_CLOSE`` is kept as
@@ -52,6 +54,13 @@ def legacy_url(d: date) -> str:
 def full_bhav_url(d: date) -> str:
     return f"{BASE}/products/content/sec_bhavdata_full_{d:%d%m%Y}.csv"
 
+
+def index_close_url(d: date) -> str:
+    return f"{BASE}/content/indices/ind_close_all_{d:%d%m%Y}.csv"
+
+
+# Names in ind_close_all (case-insensitive) -> stored benchmark names
+INDEX_NAMES = {"nifty 50": "NIFTY 50", "nifty 500": "NIFTY 500", "india vix": "INDIA VIX"}
 
 EQUITY_L_URL = f"{BASE}/content/equities/EQUITY_L.csv"
 SYMBOL_CHANGE_URL = f"{BASE}/content/equities/symbolchange.csv"
@@ -139,6 +148,30 @@ def parse_legacy(raw_csv: bytes, session: date) -> pd.DataFrame:
         "trades": _num(df["TOTALTRADES"]),
     })
     return _finish(out, session)
+
+
+def parse_index_close(raw_csv: bytes, session: date) -> pd.DataFrame:
+    """ind_close_all: one row per index. Returns the benchmark indices only, named as stored."""
+    df = _read_csv(raw_csv)
+    df["_name"] = df["Index Name"].str.lower().map(INDEX_NAMES)
+    df = df[df["_name"].notna()]
+    if df.empty:
+        raise ValueError("no benchmark index rows in ind_close_all")
+    dates = {datetime.strptime(x, "%d-%m-%Y").date() for x in df["Index Date"] if x}
+    if dates != {session}:
+        raise DataMismatch(f"index close dates {sorted(dates)} do not match session {session}")
+    out = pd.DataFrame({
+        "symbol": df["_name"].to_numpy(), "session_date": session,
+        "open": _num(df["Open Index Value"]).to_numpy(), "high": _num(df["High Index Value"]).to_numpy(),
+        "low": _num(df["Low Index Value"]).to_numpy(), "close": _num(df["Closing Index Value"]).to_numpy(),
+        # India VIX publishes no volume ("-"); stored as 0 like Yahoo does, never used as a trading quantity
+        "volume": _num(df["Volume"]).fillna(0).to_numpy(),
+    })
+    out["turnover_inr"] = (_num(df["Turnover (Rs. Cr.)"]) * 1e7).to_numpy()
+    out["ts"] = session_bar_start(session)
+    if out["close"].isna().any():
+        raise ValueError(f"missing close for {list(out.loc[out['close'].isna(), 'symbol'])}")
+    return out.reset_index(drop=True)
 
 
 def parse_full_bhav(raw_csv: bytes, session: date) -> pd.DataFrame:
@@ -292,8 +325,15 @@ class NSEArchiveProvider:
     def intraday_bars(self, symbols, interval, start, end):
         raise ProviderUnavailable("NSE archives publish end-of-day files only; no intraday bars")
 
-    def index_bars(self, index, start, end):
-        raise ProviderUnavailable("NSE index history lives on www.nseindia.com, which this environment cannot reach")
+    def index_bars(self, index, start, end):  # pragma: no cover - per-session use goes through index_closes()
+        raise NotImplementedError("use index_closes(d) per session")
+
+    def index_closes(self, d: date) -> BarFrame:
+        """Official benchmark index bars (Nifty 50, Nifty 500, India VIX) for one session.
+
+        Raises ``DataNotPublished`` when there was no session or the file is not out yet."""
+        bars, lin = self._parsed("index_close", index_close_url(d), f"{d:%Y%m%d}.csv", d, parse_index_close)
+        return BarFrame(bars, [lin])
 
     def security_master(self) -> tuple[list[Security], Lineage]:
         f = self._fetch("equity_list", EQUITY_L_URL, f"{date.today():%Y%m%d}.csv", date.today())

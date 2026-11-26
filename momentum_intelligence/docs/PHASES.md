@@ -16,7 +16,7 @@ architectural changes. Nothing is reported as working unless its tests pass.
 | 8 | Dashboard (14 pages, mobile-first, charts) | API contract tests, UI build, Android-width screenshots | **Done** (confirmed) |
 | 9 | Intraday monitoring, scheduler, alerts, automated reports | Completed-candle only, alert states, job idempotency, report timestamps and sources | **Done** (confirmed) |
 | 10 | Optional Claude research layer | Grounding check rejects unsupported numbers; works with AI disabled | **Done** (confirmed; live API call pending a key) |
-| 11 | Hardening, deployment, backup/restore, docs | Full test suite, migration from empty DB, backup/restore drill, acceptance checklist | **Done** (confirmed; see `docs/ACCEPTANCE.md`; ADR-018 awaiting decision) |
+| 11 | Hardening, deployment, backup/restore, docs | Full test suite, migration from empty DB, backup/restore drill, acceptance checklist | **Done** (confirmed; see `docs/ACCEPTANCE.md`; ADR-018 applied afterwards) |
 
 ## Final acceptance checklist (brief section 22)
 

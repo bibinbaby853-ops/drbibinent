@@ -4,8 +4,8 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: all 11 phases complete and confirmed. ADR-018 (official NSE index closes for
-benchmarks) awaits a decision.**
+**Status: all 11 phases complete and confirmed. Benchmarks use NSE's official index closes
+(ADR-018, 26 Nov 2026).**
 See `docs/PHASES.md` and `docs/ACCEPTANCE.md`.
 Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 8.9); three forward paper accounts are the ongoing test.
@@ -61,7 +61,7 @@ python -m app.market_data.cli status
 python -m app.universe.cli snapshot --indicators              # latest session's universe + indicators
 python -m app.universe.cli snapshot --start 2021-06-01 --end 2026-11-23
 python -m app.universe.cli show
-python -m app.market_data.cli --live indices                  # Nifty 50 / 500 / India VIX (Yahoo, unofficial)
+python -m app.market_data.cli --live indices                  # Nifty 50 / 500 / India VIX: NSE official + Yahoo fallback
 python -m app.scoring.cli run --start 2021-07-01              # RS, sectors, regime, scores (latest by default)
 python -m app.scoring.cli show
 python -m app.strategies.cli build                                     # rebuild signals (causal, reproducible)
@@ -72,6 +72,7 @@ python -m app.portfolio.cli init --name main --capital 100000          # PAPER a
 python -m app.portfolio.cli propose --name main --symbol INFY --entry 1100 --stop 1040
 python -m app.portfolio.cli run --name main --auto-signals             # process new sessions, strategy signals as proposals
 python -m app.portfolio.cli show --name main
+python -m app.portfolio.cli reset --name main --start-after 2026-11-23 --reason "..." --yes   # audited restart
 ```
 
 Re-running any command gives the same database state. Downloaded files are

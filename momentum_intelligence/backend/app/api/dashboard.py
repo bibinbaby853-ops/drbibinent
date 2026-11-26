@@ -128,10 +128,12 @@ def candles(symbol: str, days: int = Query(250, ge=20, le=2000), db: Session = D
     stock = db.execute(select(Stock).where(Stock.symbol == symbol.upper(), Stock.kind.in_(("equity", "index")))).scalars().first()
     if stock is None:
         raise HTTPException(404, f"unknown symbol {symbol}")
-    src = "demo" if stock.demo else ("yahoo" if stock.kind == "index" else "nse_archive")
-    df = pd.read_sql(text("""select session_date, open, high, low, close, volume from market_candles where stock_id = :s
-        and source = :src and interval = '1d' and is_adjusted = :adj order by session_date desc limit :n"""), db.connection(),
-        params={"s": stock.id, "src": src, "adj": stock.kind != "index", "n": days + 200}).sort_values("session_date")
+    srcs = ["demo"] if stock.demo else (["nse_index", "yahoo"] if stock.kind == "index" else ["nse_archive"])
+    # indices: the official NSE bar where there is one, Yahoo otherwise (ADR-018)
+    df = pd.read_sql(text("""select distinct on (session_date) session_date, open, high, low, close, volume from market_candles
+        where stock_id = :s and source = any(:srcs) and interval = '1d' and is_adjusted = :adj
+        order by session_date desc, array_position(:srcs, source) limit :n"""), db.connection(),
+        params={"s": stock.id, "srcs": srcs, "adj": stock.kind != "index", "n": days + 200}).sort_values("session_date")
     if df.empty:
         raise HTTPException(404, f"no candles for {symbol}")
     e20, e50 = core.ema(df.close, 20), core.ema(df.close, 50)
@@ -143,8 +145,9 @@ def candles(symbol: str, days: int = Query(250, ge=20, le=2000), db: Session = D
         and confirmed is not null and confirmed >= :f order by confirmed"""), {"s": stock.id, "h": strategy_hash(default_strategy_config()),
                                                                              "f": rows[0]["time"]}).all()
     return {"symbol": stock.symbol, "name": stock.name, "sector": stock.sector, "kind": stock.kind,
-            "prices": "adjusted for splits and bonuses" if stock.kind != "index" else "index level (Yahoo, unofficial)",
-            "source": ("DEMO (synthetic)" if stock.demo else SOURCE if stock.kind != "index" else "Yahoo Finance (unofficial)"),
+            "prices": "adjusted for splits and bonuses" if stock.kind != "index" else "index level",
+            "source": ("DEMO (synthetic)" if stock.demo else SOURCE if stock.kind != "index"
+                       else "NSE official index closes (Yahoo, unofficial, where NSE has none)"),
             "demo": stock.demo, "candles": rows,
             "signals": [{"time": s.confirmed.isoformat(), "strategy": s.strategy, "entry": s.entry, "stop": s.stop} for s in sigs]}
 
@@ -154,8 +157,9 @@ def market_overview(days: int = Query(250, ge=20, le=2000), db: Session = Depend
     rows = db.execute(select(MarketRegime).order_by(MarketRegime.session_date.desc()).limit(days)).scalars().all()[::-1]
     if not rows:
         raise HTTPException(404, "no regime computed yet")
-    nifty = db.execute(text("""select c.session_date, c.close from market_candles c join stocks s on s.id = c.stock_id
-        where s.key = 'INDEX:NIFTY 50' and c.source = 'yahoo' and c.session_date >= :f order by 1"""), {"f": rows[0].session_date}).all()
+    from ..market_data.indices import benchmark
+    n50, _ = benchmark(db, "NIFTY 50")
+    nifty = [(d, float(v)) for d, v in n50.items() if d >= rows[0].session_date]
     last = rows[-1]
     return {"latest": {"session_date": last.session_date, "regime": last.regime, "raw_regime": last.components.get("raw_regime"),
                        "score": last.score, "policy": last.policy, "components": last.components.get("components"),
@@ -165,8 +169,9 @@ def market_overview(days: int = Query(250, ge=20, le=2000), db: Session = Depend
                          "breadth200": (r.components.get("inputs") or {}).get("breadth200_pct"),
                          "vix": (r.components.get("inputs") or {}).get("vix"),
                          "median_ret_63": (r.components.get("inputs") or {}).get("median_ret_63_pct")} for r in rows],
-            "nifty": [{"time": n.session_date.isoformat(), "value": n.close} for n in nifty],
-            "sources": {"index_levels": "Yahoo Finance (unofficial)", "breadth": SOURCE}}
+            "nifty": [{"time": d.isoformat(), "value": v} for d, v in nifty],
+            "benchmark_sources": last.components.get("benchmark_sources"),
+            "sources": {"index_levels": "NSE official index closes (Yahoo, unofficial, where NSE has none)", "breadth": SOURCE}}
 
 
 @router.get("/accounts")

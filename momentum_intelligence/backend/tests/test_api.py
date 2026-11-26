@@ -90,23 +90,33 @@ def test_health_degrades_on_a_recent_job_failure_without_exposing_the_error():
             c.execute(text("delete from job_runs where key = 'health-test'"))
 
 
-def test_health_names_a_benchmark_carried_forward_in_live_mode(monkeypatch):
+def test_health_names_a_benchmark_carried_forward_in_live_mode():
+    from datetime import date
+    from app.api import system
+    d = date(2026, 11, 25)
+    base = {"official_last": {"NIFTY 50": date(2026, 11, 23), "NIFTY 500": d, "INDIA VIX": d},
+            "any_source_last": {}, "regime_session": d}
+    used = {"NIFTY 50": "carried", "NIFTY 500": "nse", "INDIA VIX": "yahoo"}
+    assert system._benchmark_problems({**base, "regime_used": used}, d) == [
+        "NIFTY 50: no close for 2026-11-25; the previous close was carried forward"]
+    # the official close arrived after scoring: say how to fix it
+    late = {**base, "official_last": {**base["official_last"], "NIFTY 50": d}, "regime_used": used}
+    assert "rescore with `python -m app.scoring.cli run --start 2026-11-25`" in system._benchmark_problems(late, d)[0]
+    # all official, or Yahoo fallback only: no problem
+    assert system._benchmark_problems({**base, "regime_used": {"NIFTY 50": "nse", "NIFTY 500": "yahoo"}}, d) == []
+    # regime rows from before ADR-018: fall back to stored dates
+    old = {"any_source_last": {"NIFTY 50": date(2026, 11, 23), "NIFTY 500": d}, "regime_used": None, "regime_session": d}
+    assert system._benchmark_problems(old, d) == ["NIFTY 50: no close stored for 2026-11-25; the previous close is carried forward"]
+
+
+def test_health_reports_benchmark_problems_in_live_mode_only(monkeypatch):
     from datetime import date
     from app.api import system
     from app.config import get_settings
     monkeypatch.setattr(system, "_latest_session", lambda: date(2026, 11, 25))
-    monkeypatch.setattr(system, "_benchmarks", lambda: {"NIFTY 50": date(2026, 11, 23), "NIFTY 500": date(2026, 11, 25),
-                                                        "INDIA VIX": None, "OTHER": date(2026, 11, 23)})
+    monkeypatch.setattr(system, "_benchmarks", lambda: {"regime_used": {"NIFTY 50": "carried"}, "regime_session": date(2026, 11, 25),
+                                                        "official_last": {}})
+    assert not any("NIFTY 50" in p for p in client.get("/api/health").json()["problems"])   # demo mode
     monkeypatch.setattr(get_settings(), "data_mode", "live")
     body = client.get("/api/health").json()
-    assert body["status"] == "degraded"
-    assert "NIFTY 50, OTHER (Yahoo) last 2026-11-23; carried forward for 2026-11-25" in body["problems"]
-    assert "INDIA VIX (Yahoo) last never; carried forward for 2026-11-25" in body["problems"]
-    assert not any("NIFTY 500" in p for p in body["problems"])
-
-
-def test_health_on_an_empty_database_says_so(monkeypatch):
-    from app.api import system
-    monkeypatch.setattr(system, "_latest_session", lambda: None)
-    body = client.get("/api/health").json()
-    assert body["status"] == "degraded" and body["problems"][0].startswith("no NSE sessions loaded yet")
+    assert body["status"] == "degraded" and any(p.startswith("NIFTY 50: no close") for p in body["problems"])

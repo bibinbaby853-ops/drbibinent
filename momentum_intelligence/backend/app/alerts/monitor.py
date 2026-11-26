@@ -56,8 +56,11 @@ def watch_set(db: Session, cfg: StrategyConfig, configs: list[StrategyConfig], t
         from (select stock_id, session_date, close, volume, row_number() over (partition by stock_id order by session_date desc) rn
               from market_candles where stock_id = any(:ids) and not is_adjusted and source = 'nse_archive' and session_date <= :d) x
         where rn <= 20 group by stock_id"""), {"ids": ids, "d": last}).all() if ids else []
-    idx = {r[0]: float(r[1]) for r in db.execute(text("""select s.symbol, c.close from market_candles c join stocks s on s.id = c.stock_id
-        where s.key in ('INDEX:NIFTY 50', 'INDEX:INDIA VIX') and c.source = 'yahoo' and c.session_date = :d"""), {"d": last}).all()}
+    # previous close: the official NSE index close, Yahoo only if NSE has none (ADR-018)
+    idx = {r[0]: float(r[1]) for r in db.execute(text("""select distinct on (s.symbol) s.symbol, c.close
+        from market_candles c join stocks s on s.id = c.stock_id
+        where s.key in ('INDEX:NIFTY 50', 'INDEX:INDIA VIX') and c.source in ('nse_index', 'yahoo') and c.session_date = :d
+        order by s.symbol, (c.source = 'nse_index') desc"""), {"d": last}).all()}
     return {"last_session": last, "positions": positions, "watch": watch,
             "prev_close": {r.stock_id: float(r.prev_close) for r in ref}, "avg_vol": {r.stock_id: float(r.avg_vol) for r in ref},
             "nifty_prev": idx.get("NIFTY 50"), "vix_prev": idx.get("INDIA VIX")}

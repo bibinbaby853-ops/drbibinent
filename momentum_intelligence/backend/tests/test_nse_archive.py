@@ -95,12 +95,12 @@ def test_offline_mode_never_touches_network(tmp_path):
     assert http.calls == []
 
 
-def test_intraday_and_index_are_honestly_unavailable(tmp_path):
+def test_intraday_is_honestly_unavailable_and_indices_come_per_session(tmp_path):
     from app.market_data.base import ProviderUnavailable
     p = n.NSEArchiveProvider(tmp_path, http=FakeHttp({}))
     with pytest.raises(ProviderUnavailable):
         p.intraday_bars(["ALPHA"], "15m", D, D)
-    with pytest.raises(ProviderUnavailable):
+    with pytest.raises(NotImplementedError):      # official index closes: index_closes(d), see test_benchmarks.py
         p.index_bars("NIFTY 50", D, D)
 
 
