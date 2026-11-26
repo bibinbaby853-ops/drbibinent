@@ -1,0 +1,108 @@
+# Momentum Intelligence
+
+Positional (2-8 week) momentum research and **paper** portfolio management for
+NSE equities. Deterministic, auditable rules; risk-first position sizing; no
+live order placement anywhere in the codebase.
+
+**Status: all 11 phases complete and confirmed. Benchmarks use NSE's official index closes
+(ADR-018, 26 Nov 2026).**
+See `docs/PHASES.md` and `docs/ACCEPTANCE.md`.
+Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
+8.9); three forward paper accounts are the ongoing test.
+
+## Documents
+
+* `docs/ARCHITECTURE.md` - system design, data sources and licensing, schema, API, risk rules, traceability to the brief
+* `docs/DECISIONS.md` - architecture decision records, including those awaiting confirmation
+* `docs/PHASES.md` - phase plan, exit tests and the final acceptance checklist
+* `docs/ACCEPTANCE.md` - acceptance results with evidence
+* `docs/DEPLOYMENT.md` - server set-up, HTTPS, security model, updates
+* `docs/RUNBOOK.md` - daily operation, health, backups and restore, troubleshooting
+
+## What works today
+
+* Validated configuration with every setting from the brief (capital ₹100,000, 5 positions, 0.5% risk, 20% / 30% exposure caps, 20% cash, 2.5% aggregate risk, ₹5 Cr liquidity, score weights and bands). Inconsistent settings and any non-paper execution mode are rejected at start-up.
+* FastAPI service: `GET /api/health` (database, data freshness, benchmark lag, job failures), settings, OpenAPI docs at `/docs` (off in production).
+* PostgreSQL connectivity (development and test databases).
+* Environment checker; Docker deployment (database, API + dashboard, scheduler, optional HTTPS proxy), hardened and tested in production mode; backup, restore and restore-drill scripts.
+* Market data engine (`backend/app/market_data/`): NSE official end-of-day archives (primary), Yahoo (unofficial; intraday, indices, split cross-check), labelled DEMO data, and a Kite adapter that honestly reports it is unavailable here. Polite HTTP with rate limits and retries, raw file cache with SHA-256 lineage, data-quality checks, ISIN-based identity across symbol and ISIN changes, corporate-action factors and adjusted series, Alembic schema.
+
+* Universe engine (`backend/app/universe/`): point-in-time eligibility for every session with reason codes (series, liquidity, history, data quality, unconfirmed corporate actions, GSM), reproducible snapshots keyed by rule hash.
+* Indicator engine (`backend/app/indicators/`): trend, momentum, volatility, level, volume and weekly indicators, causal and point-in-time adjusted.
+* Scoring (`backend/app/scoring/`): relative strength vs Nifty 50 / Nifty 500 / sector with a 1-99 rank and classes; sector rotation from constituent composites; five-state market regime with entry policy and hysteresis; 100-point score with 28 recorded sub-checks.
+* Risk engine and paper portfolio (`backend/app/risk/`, `backend/app/portfolio/`): ten ordered pre-trade checks (re-applied at fill), next-open fills with slippage and Indian delivery charges, stops, partial exits, trailing and time stops, split handling, drawdown alerts, daily reconciliation and a full journal. PAPER ONLY.
+* Strategies (`backend/app/strategies/`): Breakout, Pullback and Continuation rule sets, a signal state machine (early warning, potential setup, confirmed, invalidated, expired) with one active signal per stock and a cooldown; confirmed signals feed the paper portfolio through the risk engine.
+* Backtesting (`backend/app/backtesting/`): in-memory replica of the paper cycle (parity-verified), walk-forward and sensitivity analysis, metrics versus the Nifty 50, results stored and served.
+* Optional Claude commentary (`backend/app/ai/`): written only from the report's stored data; every number must pass a grounding check or the commentary is not shown. Off unless `MI_AI_ENABLED=true` and `MI_ANTHROPIC_API_KEY` are set.
+* Read-only API (bearer token required when `MI_API_TOKEN` is set): `/api/v1/universe`, `/api/v1/stocks/{symbol}/indicators`, `/api/v1/market/regime`, `/api/v1/sectors`, `/api/v1/scores`, `/api/v1/stocks/{symbol}/score`, `/api/v1/portfolio` (+ `/history`, `/orders`, `/proposals`, `/journal`, `/risk-events`; POST `/proposals`, POST `/positions/{id}/exit`), `/api/v1/signals`, `/api/v1/stocks/{symbol}/signals`, `/api/v1/backtests`, `/api/v1/backtests/{id}`.
+
+## Dashboard
+
+```bash
+cd frontend && npm ci && npm run build      # once, or after frontend changes
+cd ../backend && uvicorn app.main:app       # dashboard at http://localhost:8000, API under /api
+python -m app.scheduler.service             # scheduler: pre-market 08:30, intraday alerts 09:30-15:45, end of day from 18:00
+python -m app.scheduler.service once eod    # or run one job now (pre_market | intraday | eod), e.g. from cron
+node ../frontend/scripts/mobile-check.cjs http://127.0.0.1:8000 screens   # 360 px check of every page
+```
+
+For frontend development: `npm run dev` in `frontend/` (port 5173, proxies `/api` to :8000).
+
+## Market data commands
+
+```bash
+cd backend
+alembic upgrade head                                          # create / migrate tables
+python -m app.market_data.cli --demo ingest --days 60         # labelled synthetic data
+python -m app.market_data.cli --live ingest --start 2026-01-01 --end 2026-11-25
+python -m app.market_data.cli --live reference                # names, sectors, inactive flags
+python -m app.market_data.cli --live adjust --confirm-yahoo   # check inferred splits against Yahoo
+python -m app.market_data.cli status
+python -m app.universe.cli snapshot --indicators              # latest session's universe + indicators
+python -m app.universe.cli snapshot --start 2021-06-01 --end 2026-11-23
+python -m app.universe.cli show
+python -m app.market_data.cli --live indices                  # Nifty 50 / 500 / India VIX: NSE official + Yahoo fallback
+python -m app.scoring.cli run --start 2021-07-01              # RS, sectors, regime, scores (latest by default)
+python -m app.scoring.cli show
+python -m app.strategies.cli build                                     # rebuild signals (causal, reproducible)
+python -m app.strategies.cli show
+python -m app.backtesting.cli all                                      # default run, sensitivity, walk-forward (about 1.5 h)
+python -m app.backtesting.cli show
+python -m app.portfolio.cli init --name main --capital 100000          # PAPER account
+python -m app.portfolio.cli propose --name main --symbol INFY --entry 1100 --stop 1040
+python -m app.portfolio.cli run --name main --auto-signals             # process new sessions, strategy signals as proposals
+python -m app.portfolio.cli show --name main
+python -m app.portfolio.cli reset --name main --start-after 2026-11-23 --reason "..." --yes   # audited restart
+```
+
+Re-running any command gives the same database state. Downloaded files are
+kept under `data/historical/nse/` (git-ignored); `--offline` reads only those.
+
+## Quick start (local)
+
+```bash
+cd momentum_intelligence
+python scripts/check_environment.py          # what this machine can do
+sudo ./scripts/dev_db_setup.sh               # local PostgreSQL databases (dev + test)
+pip install -r backend/requirements.txt
+cp .env.example .env                         # then edit values; never commit .env
+cd backend && uvicorn app.main:app --reload  # http://localhost:8000/docs
+python -m pytest -q                          # from backend/
+```
+
+## Docker
+
+```bash
+cp .env.example .env && chmod 600 .env       # production values: docs/DEPLOYMENT.md
+docker compose build
+docker compose --profile https up -d         # or without --profile https behind a VPN/SSH tunnel
+scripts/backup.sh --compose                  # nightly from cron; scripts/restore_drill.sh --compose monthly
+```
+
+## Safety
+
+* Paper trading only. There is no broker order client; a test fails the build if one appears.
+* Secrets are read from the environment, never returned by the API and never committed.
+* Production refuses to start without an API token, with a default database password or with demo data.
+* Data is labelled with its source and licence; nothing is fabricated when data is missing.
+* Backtest results are historical simulations, not expected returns.

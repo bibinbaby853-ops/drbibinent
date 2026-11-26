@@ -1,0 +1,10 @@
+# HTTPS in front of the dashboard/API. Caddy obtains and renews the certificate for MI_DOMAIN automatically
+# (the domain's DNS must point at this server and ports 80/443 must be open).
+{$MI_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy api:8000
+}

@@ -1,0 +1,79 @@
+{
+  "universe": "nifty500",
+  "generated": "2026-11-21T08:20",
+  "first_entry": "2021-11-23",
+  "last_entry": "2026-11-20",
+  "max_hold": 20,
+  "cost_pct": 0.3,
+  "baseline_win_pct": 20.51,
+  "baseline_avg_r": 0.07,
+  "baseline_uptrend_avg_r": 0.13,
+  "patterns": {
+    "Emerging from long consolidation": {
+      "trades": 450,
+      "win_pct": 28.67,
+      "avg_r": 0.16,
+      "profit_factor": 1.19
+    },
+    "Breakout retest": {
+      "trades": 2173,
+      "win_pct": 32.03,
+      "avg_r": 0.11,
+      "profit_factor": 1.11
+    },
+    "50-day high breakout": {
+      "trades": 1467,
+      "win_pct": 32.52,
+      "avg_r": 0.11,
+      "profit_factor": 1.17
+    },
+    "Tight consolidation": {
+      "trades": 2603,
+      "win_pct": 41.8,
+      "avg_r": 0.04,
+      "profit_factor": 1.02
+    },
+    "Bull flag": {
+      "trades": 493,
+      "win_pct": 36.51,
+      "avg_r": 0.04,
+      "profit_factor": 1.07
+    },
+    "Higher lows into resistance": {
+      "trades": 458,
+      "win_pct": 27.95,
+      "avg_r": 0.02,
+      "profit_factor": 0.91
+    },
+    "Cup and handle": {
+      "trades": 430,
+      "win_pct": 31.63,
+      "avg_r": 0.02,
+      "profit_factor": 0.95
+    },
+    "20-day high breakout": {
+      "trades": 861,
+      "win_pct": 45.41,
+      "avg_r": 0.0,
+      "profit_factor": 0.9
+    },
+    "Bull pennant": {
+      "trades": 31,
+      "win_pct": 38.71,
+      "avg_r": -0.01,
+      "profit_factor": 0.97
+    },
+    "Consolidation breakout": {
+      "trades": 1375,
+      "win_pct": 46.04,
+      "avg_r": -0.01,
+      "profit_factor": 0.91
+    },
+    "Volatility contraction (VCP)": {
+      "trades": 220,
+      "win_pct": 34.55,
+      "avg_r": -0.11,
+      "profit_factor": 0.64
+    }
+  }
+}
