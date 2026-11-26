@@ -10,7 +10,7 @@ import logging
 
 from fastapi import FastAPI
 
-from . import __version__
+from . import __version__, security
 from .api.system import router as system_router
 from .api.backtests import router as backtests_router
 from .api.dashboard import router as dashboard_router
@@ -25,12 +25,18 @@ from .config import default_strategy_config, get_settings
 def create_app() -> FastAPI:
     settings = get_settings()
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    security.enforce(settings)  # production refuses to start with an open API, default password or demo data
     default_strategy_config()  # fail fast on an invalid configuration
+    prod = settings.app_env == "production"
     app = FastAPI(
         title="Momentum Intelligence",
         version=__version__,
         description="Positional momentum research and PAPER portfolio management for NSE equities. No live order placement.",
+        # Interactive docs and the schema are unauthenticated, so they are off in production.
+        docs_url=None if prod else "/docs", redoc_url=None if prod else "/redoc",
+        openapi_url=None if prod else "/openapi.json",
     )
+    security.install(app)
     app.include_router(system_router)
     app.include_router(universe_router)
     app.include_router(scoring_router)

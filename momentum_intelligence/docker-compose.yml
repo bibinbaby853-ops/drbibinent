@@ -1,9 +1,37 @@
 # Momentum Intelligence: database, API + dashboard (same image), scheduler (end of day, intraday alerts, reports).
-# Secrets come from .env (never committed); see .env.example.
+# Secrets come from .env (never committed); see .env.example and docs/DEPLOYMENT.md.
+# HTTPS: `docker compose --profile https up -d` adds a Caddy reverse proxy for MI_DOMAIN.
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "5"}
+
+x-app: &app
+  <<: *hardening
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: momentum-intelligence:latest
+  read_only: true
+  tmpfs: ["/tmp"]
+  env_file:
+    - path: .env
+      required: false
+  volumes:
+    - midata:/srv/data
+
 services:
   db:
     image: postgres:16
     restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
     environment:
       POSTGRES_DB: ${MI_DB_NAME:-momentum}
       POSTGRES_USER: ${MI_DB_USER:-momentum}
@@ -16,44 +44,48 @@ services:
       retries: 5
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
+    <<: *app
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - path: .env
-        required: false
     environment:
       MI_DATABASE_URL: postgresql+psycopg://${MI_DB_USER:-momentum}:${MI_DB_PASSWORD}@db:5432/${MI_DB_NAME:-momentum}
+      # The published port is bound to localhost and the HTTPS proxy is on the internal network.
+      FORWARDED_ALLOW_IPS: "*"
     ports:
-      - "127.0.0.1:8000:8000"
-    volumes:
-      - ./data:/srv/data
+      - "127.0.0.1:${MI_PORT:-8000}:8000"
 
   scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
+    <<: *app
     depends_on:
       db:
         condition: service_healthy
       api:
-        condition: service_started   # the api container applies migrations on start
-    env_file:
-      - path: .env
-        required: false
+        condition: service_healthy   # the api container applies migrations on start
     environment:
       MI_DATABASE_URL: postgresql+psycopg://${MI_DB_USER:-momentum}:${MI_DB_PASSWORD}@db:5432/${MI_DB_NAME:-momentum}
-      MI_DATA_MODE: live
     command: ["python", "-m", "app.scheduler.service"]
     healthcheck:
       disable: true
+
+  proxy:
+    <<: *hardening
+    image: caddy:2
+    profiles: ["https"]
+    cap_add: ["NET_BIND_SERVICE"]
+    depends_on: [api]
+    environment:
+      MI_DOMAIN: ${MI_DOMAIN:-}   # required for the https profile: the public domain name
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./data:/srv/data
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   pgdata:
+  midata:
+  caddy_data:
+  caddy_config:

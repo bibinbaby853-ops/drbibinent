@@ -19,7 +19,7 @@ def to_weekly(daily: pd.DataFrame, *, as_of: date | None = None, week_closed: bo
         return daily.iloc[0:0]
     d = daily.sort_values("session_date").copy()
     sd = pd.to_datetime(d["session_date"])
-    d["week"] = (sd - pd.to_timedelta(sd.dt.weekday, unit="D")).dt.date
+    d["week"] = (sd - pd.to_timedelta(sd.dt.day_of_week, unit="D")).dt.date
     agg = d.groupby("week", sort=True).agg(session_date=("session_date", "max"), open=("open", "first"),
                                            high=("high", "max"), low=("low", "min"), close=("close", "last"),
                                            volume=("volume", "sum"), sessions=("session_date", "count"))

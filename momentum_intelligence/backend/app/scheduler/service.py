@@ -133,6 +133,9 @@ def main(argv=None) -> int:
     o = sub.add_parser("once")
     o.add_argument("job", choices=list(JOBS))
     a = ap.parse_args(argv)
+    from ..config import get_settings
+    from ..security import enforce
+    enforce(get_settings())
     if a.cmd == "once":
         print(json.dumps(JOBS[a.job](), default=str, indent=2))
         return 0

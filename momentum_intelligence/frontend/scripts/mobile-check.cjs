@@ -1,6 +1,8 @@
 // Mobile check: every page at an Android width (default 360x780). Fails on console errors, failed API
 // calls, horizontal overflow, or a page without its heading. Saves a screenshot per page.
 // Usage: node scripts/mobile-check.cjs http://127.0.0.1:8000 out-dir [scale]
+// For a server with MI_API_TOKEN set, pass the token in the MI_TOKEN environment variable (never as an argument).
+// Content-Security-Policy violations show up as console errors, so a pass also means the CSP does not break pages.
 const { chromium } = require("playwright");
 const fs = require("fs");
 
@@ -18,6 +20,7 @@ const pages = [
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, deviceScaleFactor: scale, isMobile: true, hasTouch: true });
+  if (process.env.MI_TOKEN) await ctx.addInitScript((t) => sessionStorage.setItem("mi_token", t), process.env.MI_TOKEN);
   const results = [];
   let stockPath = null;
   for (const [path, heading] of pages) results.push(await check(ctx, path, heading));

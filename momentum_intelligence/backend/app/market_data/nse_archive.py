@@ -69,8 +69,20 @@ def _unzip_single(raw: bytes) -> bytes:
         return zf.read(names[0])
 
 
+def _is_xlsx(raw: bytes) -> bool:
+    """An .xlsx workbook is a zip holding xl/workbook.xml. Entry order inside the zip varies by writer, so the
+    archive is opened rather than searched for a marker near the start."""
+    if raw[:4] != b"PK\x03\x04":
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            return "xl/workbook.xml" in zf.namelist()
+    except zipfile.BadZipFile:
+        return False
+
+
 def _read_csv(raw: bytes) -> pd.DataFrame:
-    if raw[:4] == b"PK\x03\x04" and b"[Content_Types].xml" in raw[:200]:
+    if _is_xlsx(raw):
         # NSE occasionally serves an Excel workbook under a .csv name (seen: full bhavcopy 8 Aug 2022)
         df = pd.read_excel(io.BytesIO(raw), dtype=str, keep_default_na=False)
     else:

@@ -128,3 +128,19 @@ def test_unreadable_files_fail_the_session_or_skip_delivery(tmp_path):
     bad = FakeHttp({n.udiff_url(D): b"not a zip"})
     with pytest.raises(ProviderError, match="unreadable udiff"):
         n.NSEArchiveProvider(tmp_path / "b", http=bad).bhavcopy(D)
+
+
+def test_excel_detection_does_not_depend_on_zip_entry_order():
+    import io as _io
+    import zipfile as _zf
+    import pandas as pd
+    buf = _io.BytesIO()
+    pd.read_csv(_io.BytesIO(full_csv(D, ROWS)), dtype=str).to_excel(buf, index=False)
+    src = _zf.ZipFile(_io.BytesIO(buf.getvalue()))
+    out = _io.BytesIO()
+    with _zf.ZipFile(out, "w", _zf.ZIP_DEFLATED) as z:   # same workbook, entries written in reverse order
+        for name in reversed(src.namelist()):
+            z.writestr(name, src.read(name))
+    df = n.parse_full_bhav(out.getvalue(), D)
+    assert df["delivery_pct"].notna().all()
+    assert not n._is_xlsx(zipped("x.csv", udiff_csv(D, ROWS)))   # a zipped CSV is not a workbook

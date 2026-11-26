@@ -138,8 +138,8 @@ def weekly_asof(bars: pd.DataFrame) -> pd.DataFrame:
                        "w_rsi_14": core.rsi(c, 14)})
     wk["w_sma_30_slope_4"] = core.slope_pct(wk["w_sma_30"], 4)
     sd = pd.to_datetime(b["session_date"])
-    this_week = (sd - pd.to_timedelta(sd.dt.weekday, unit="D")).dt.date
-    closed = sd.dt.weekday >= 4
+    this_week = (sd - pd.to_timedelta(sd.dt.day_of_week, unit="D")).dt.date
+    closed = sd.dt.day_of_week >= 4
     last_prior = this_week.map(lambda x: x - pd.Timedelta(days=7))
     use_week = pd.Series(np.where(closed, this_week, last_prior), index=b.index)
     # the last completed week may be earlier still (holiday weeks): take the latest week <= use_week

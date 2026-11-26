@@ -8,3 +8,4 @@ data/cache/*
 !data/**/.gitkeep
 frontend/node_modules/
 frontend/dist/
+backups/
