@@ -131,7 +131,7 @@ to start after 23 Nov 2026 and re-run (the discarded orders are recorded in each
 
 Result. Official and Yahoo closes are identical for Nifty 50 and Nifty 500 wherever both exist (India VIX within
 0.06%, rounding); NSE alone has 7 / 13 / 14 sessions (Nifty 50 / Nifty 500 / VIX), mostly weekend special
-sessions and holidays-adjacent days Yahoo skips, plus 25 Nov 2026. Regime score changed on 8 of 1,340
+sessions and some regular sessions Yahoo lacks (e.g. 1 Jan, 26 Dec 2022), plus 25 Nov 2026. Regime score changed on 8 of 1,340
 sessions and the regime label on 6, all from the 1 Feb 2026 Budget session through 11 Feb 2026. On 25 Nov the
 regime stayed sideways (score 0); 36 of 935 stock scores changed (at most 3.95 points, 5 band changes);
 relative-strength ranks did not change. Across all three configurations exactly one signal changed in five
