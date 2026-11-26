@@ -45,10 +45,10 @@ Result: **12 pass, 1 warn, 0 fail.**
 
 ## Open items
 
-* **ADR-018 (decision needed).** Health on the production stack reports `degraded`: Yahoo's last Nifty
-  50 / Nifty 500 / India VIX bar is 23 Nov, so 25 Nov regime and relative strength used carried values. The
-  official Nifty 50 close on 25 Nov was 25,819.25, against 25,349.65 carried (1.85% higher). Proposed fix in
-  `docs/DECISIONS.md`.
+* **ADR-018 (resolved after the run above).** At the time of this record, health reported `degraded` because
+  Yahoo had no 25 Nov index bars. Benchmarks now come from NSE's official index file. After the switch and full
+  recalculation, health is `ok` in live mode, all 268 tests pass (266 + 2 skipped in the image), and the
+  acceptance check again gives 12 pass, 1 warn, 0 fail. Details are in `docs/DECISIONS.md` ADR-018.
 * **Live Claude call** not yet verified (Phase 10): needs `MI_ANTHROPIC_API_KEY`.
 * **Intraday run** (criterion 4) to be confirmed on the first trading day of a running deployment.
 * **Public HTTPS certificate** to be confirmed on the real domain.

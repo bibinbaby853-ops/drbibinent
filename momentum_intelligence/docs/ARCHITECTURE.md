@@ -789,7 +789,7 @@ package; the old scanner stays usable until the new one replaces it.
 * Historical sector classification is current, not point in time.
 * Until 26 Nov 2026 benchmarks came from Yahoo, which lagged NSE on the latest session and lacks NSE's
   weekend special sessions; the carried values were undocumented. ADR-018 moved benchmarks to NSE's official
-  index file; recalculating scoring, signals and the forward-test accounts is in progress. Backtest runs stored before
+  index file and recalculated scoring, signals and the forward-test accounts (results in ADR-018). Backtest runs stored before
   then used Yahoo benchmarks and are kept as records.
 * The login throttle and the configuration cache are per process; the deployment runs one API process.
 

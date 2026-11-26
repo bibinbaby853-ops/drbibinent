@@ -125,7 +125,18 @@ session only.
 
 Decision (owner, 26 Nov 2026): switch and recalculate. Implemented: `ind_close_all` is fetched for every
 session (backfilled from June 2021) and preferred over Yahoo; every regime row records `benchmark_sources`;
-the nightly pipeline waits until 22:00 IST for the official file. In progress: recomputing scoring and signals
-for the full history and resetting the three forward-test accounts to start after 23 Nov 2026 (the discarded
-orders are recorded in each account's journal). Phase 6/7 replay and exercise accounts and stored backtest
+the nightly pipeline waits until 22:00 IST for the official file; scoring was recomputed for the full history
+(1,340 sessions) and signals rebuilt for every configuration in use; the three forward-test accounts were reset
+to start after 23 Nov 2026 and re-run (the discarded orders are recorded in each account's journal).
+
+Result. Official and Yahoo closes are identical for Nifty 50 and Nifty 500 wherever both exist (India VIX within
+0.06%, rounding); NSE alone has 7 / 13 / 14 sessions (Nifty 50 / Nifty 500 / VIX), mostly weekend special
+sessions and holidays-adjacent days Yahoo skips, plus 25 Nov 2026. Regime score changed on 8 of 1,340
+sessions and the regime label on 6, all from the 1 Feb 2026 Budget session through 11 Feb 2026. On 25 Nov the
+regime stayed sideways (score 0); 36 of 935 stock scores changed (at most 3.95 points, 5 band changes);
+relative-strength ranks did not change. Across all three configurations exactly one signal changed in five
+years: J&KBANK's 25 Nov breakout is now a potential setup instead of confirmed. The forward-test accounts placed
+the same orders as before (D0: 2 AUROPHARMA; D2: 4 AUROPHARMA, 7 ZYDUSLIFE; D5: 6 AUROPHARMA, 8 ZYDUSLIFE).
+Also found: three files (6, 10, 11 April 2023) write the date month-first; accepted only when that reading is
+the requested session. Phase 6/7 replay and exercise accounts and stored backtest
 runs were not recomputed; they are records of runs on the earlier data.
