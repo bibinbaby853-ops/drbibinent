@@ -4,8 +4,8 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: all 11 phases built; Phase 11 (hardening, deployment, backup/restore) awaiting
-confirmation, and ADR-018 (official NSE index closes for benchmarks) awaiting a decision.**
+**Status: all 11 phases complete and confirmed. ADR-018 (official NSE index closes for
+benchmarks) awaits a decision.**
 See `docs/PHASES.md` and `docs/ACCEPTANCE.md`.
 Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 8.9); three forward paper accounts are the ongoing test.
