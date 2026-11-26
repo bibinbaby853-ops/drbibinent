@@ -689,22 +689,33 @@ checks what is missing rather than assuming. Forward-test accounts `fwd-D0`,
 `fwd-D2`, `fwd-D5` (brief's rules and two redesigns) started after
 2026-11-23 and take their profile's confirmed signals automatically.
 
-## 12. AI research layer (optional, Phase 10)
+## 12. AI research layer (optional, Phase 10, `app/ai/`)
 
-* Python `anthropic` SDK, called only from the backend; key from the
-  environment (`ANTHROPIC_API_KEY`), never stored in the database or sent to
-  the browser.
-* Default model `claude-opus-5-5` with adaptive thinking and streaming for
-  long reports; server-side refusal fallback enabled by default; effort
-  configurable.
-* Input is a JSON snapshot assembled by the application (scores, prices,
-  timestamps, sources). The prompt forbids new numbers, predictions and trade
-  instructions.
-* Output checks: every number in the narrative must appear in the input
-  snapshot; otherwise the paragraph is rejected and the report falls back to
-  the deterministic template.
-* The AI cannot place orders, change settings, size positions or alter
-  signals. With no key configured the reports are produced from templates.
+* Official `anthropic` Python SDK (2.14.0), called only from the backend; key from
+  `MI_ANTHROPIC_API_KEY`, enabled by `MI_AI_ENABLED`; never stored in the database or
+  sent to the browser.
+* `claude-opus-5-5` (thinking always on for this model; depth via
+  `output_config.effort = medium`), streamed with `get_final_message()`, server-side
+  refusal fallback `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`).
+* Input: only the stored data of the day's post-market report (JSON). The system prompt
+  forbids outside knowledge, new or computed numbers, predictions, targets and advice,
+  and requires stating that no out-of-sample edge was found.
+* Grounding check (`grounding.py`): every number in the answer must equal a value in the
+  data at the precision written (rounding allowed), a list length, or part of a date in the
+  data; dates must appear in the data. Any unsupported number rejects the whole commentary.
+  Limit: the check proves each number is traceable to the data, not that it is attached to
+  the right label.
+* Outcomes stored in `ai_narratives`: accepted, rejected (with the unsupported numbers),
+  refused, truncated, error, disabled. Only accepted text is returned by the API. A
+  refusal, truncation or API error never fails the end-of-day job; the deterministic
+  report always stands on its own.
+* Runs after each post-market report (`ai_report` job, idempotent per report) or on
+  demand (`POST /api/v1/reports/{id}/narrate`, refused with 409 when disabled).
+* The AI cannot place orders, change settings, size positions or alter signals.
+* Key handling in this sandbox: network secrets cannot be stored for Anthropic's own
+  hosts, so a live call needs `MI_ANTHROPIC_API_KEY` as an environment variable (readable by
+  anyone using that environment) or in the deployment's `.env`. Verified here with a test
+  client; the live call is pending a key.
 
 ## 13. Security
 

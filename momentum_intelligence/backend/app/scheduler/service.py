@@ -82,11 +82,35 @@ def eod(today: date | None = None) -> dict:
         cfg, _ = _configs()
         with session_scope() as db:
             r = generate(db, "post_market", cfg, latest)
-        return {"done": True, "report_id": r.id, **out}
+            rid = r.id
+        ai = ai_report(rid)  # optional; never fails the end-of-day job
+        return {"done": True, "report_id": rid, "ai": ai.get("status"), **out}
     return run_job("eod", today.isoformat(), fn)
 
 
-JOBS = {"pre_market": pre_market, "intraday": intraday, "eod": eod}
+def ai_report(report_id: int | None = None) -> dict:
+    """Optional Claude narrative for the latest post-market report (no call at all when AI is disabled)."""
+    from sqlalchemy import select
+    from ..ai.research import enabled, narrate_report
+    from ..models import Report
+    with session_scope() as db:
+        q = select(Report).where(Report.kind == "post_market").order_by(Report.session_date.desc()).limit(1) if report_id is None \
+            else select(Report).where(Report.id == report_id)
+        rep = db.execute(q).scalars().first()
+        if rep is None:
+            return {"job": "ai_report", "status": "no_report"}
+        rid = rep.id
+    if not enabled():
+        return {"job": "ai_report", "status": "disabled", "report_id": rid}
+
+    def fn():
+        with session_scope() as db:
+            row = narrate_report(db, db.get(Report, rid))
+            return {"done": True, "report_id": rid, "narrative_status": row.status, "detail": row.detail}
+    return run_job("ai_report", f"report-{rid}", fn)
+
+
+JOBS = {"pre_market": pre_market, "intraday": intraday, "eod": eod, "ai_report": ai_report}
 
 
 def build_scheduler():

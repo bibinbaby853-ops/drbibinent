@@ -1,1 +1,1 @@
-"""Not implemented yet. Phase 10: optional Claude research layer (narrative only, grounded on application data)."""
+"""Optional Claude research layer (Phase 10): narrative on verified report data, grounding-checked."""

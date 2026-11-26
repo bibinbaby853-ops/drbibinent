@@ -599,3 +599,19 @@ class Report(Base):
     version: Mapped[str] = mapped_column(String(10), default="1")
 
     __table_args__ = (UniqueConstraint("kind", "session_date", "version", name="uq_report"),)
+
+
+class AINarrative(Base):
+    """A Claude narrative for a report, with its grounding result. Only ``accepted`` ones are ever shown."""
+
+    __tablename__ = "ai_narratives"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("reports.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(12))
+    model: Mapped[str | None] = mapped_column(String(60))
+    text: Mapped[str | None] = mapped_column(Text)
+    grounding: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    usage: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    detail: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

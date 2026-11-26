@@ -4,8 +4,8 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: Phases 1-9 complete; Phase 9 (scheduler, intraday alerts, reports) awaiting
-confirmation.** The optional AI narrative and hardening follow. See `docs/PHASES.md`.
+**Status: Phases 1-10 complete; Phase 10 (optional Claude commentary) awaiting
+confirmation.** Hardening and deployment follow. See `docs/PHASES.md`.
 Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 8.9); three forward paper accounts are the ongoing test.
 
@@ -29,6 +29,7 @@ Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 * Risk engine and paper portfolio (`backend/app/risk/`, `backend/app/portfolio/`): ten ordered pre-trade checks (re-applied at fill), next-open fills with slippage and Indian delivery charges, stops, partial exits, trailing and time stops, split handling, drawdown alerts, daily reconciliation and a full journal. PAPER ONLY.
 * Strategies (`backend/app/strategies/`): Breakout, Pullback and Continuation rule sets, a signal state machine (early warning, potential setup, confirmed, invalidated, expired) with one active signal per stock and a cooldown; confirmed signals feed the paper portfolio through the risk engine.
 * Backtesting (`backend/app/backtesting/`): in-memory replica of the paper cycle (parity-verified), walk-forward and sensitivity analysis, metrics versus the Nifty 50, results stored and served.
+* Optional Claude commentary (`backend/app/ai/`): written only from the report's stored data; every number must pass a grounding check or the commentary is not shown. Off unless `MI_AI_ENABLED=true` and `MI_ANTHROPIC_API_KEY` are set.
 * Read-only API (bearer token required when `MI_API_TOKEN` is set): `/api/v1/universe`, `/api/v1/stocks/{symbol}/indicators`, `/api/v1/market/regime`, `/api/v1/sectors`, `/api/v1/scores`, `/api/v1/stocks/{symbol}/score`, `/api/v1/portfolio` (+ `/history`, `/orders`, `/proposals`, `/journal`, `/risk-events`; POST `/proposals`, POST `/positions/{id}/exit`), `/api/v1/signals`, `/api/v1/stocks/{symbol}/signals`, `/api/v1/backtests`, `/api/v1/backtests/{id}`.
 
 ## Dashboard

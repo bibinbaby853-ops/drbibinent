@@ -77,8 +77,30 @@ def report(report_id: int, db: Session = Depends(db_session)) -> dict:
     r = db.get(Report, report_id)
     if r is None:
         raise HTTPException(404, f"no report {report_id}")
+    from ..ai.research import enabled
+    from ..models import AINarrative
+    last = db.execute(select(AINarrative).where(AINarrative.report_id == r.id).order_by(AINarrative.id.desc()).limit(1)).scalars().first()
+    ai = {"enabled": enabled(), "status": last.status if last else None}
+    if last is not None:
+        ai.update(model=last.model, created_at=last.created_at, detail=last.detail, grounding=last.grounding)
+        if last.status == "accepted":  # only grounded text ever reaches the browser
+            ai["text"] = last.text
     return {"id": r.id, "kind": r.kind, "session_date": r.session_date, "generated_at": r.generated_at, "data_as_of": r.data_as_of,
-            "sources": r.sources, "markdown": r.content_md, "data": r.data}
+            "sources": r.sources, "markdown": r.content_md, "data": r.data, "ai": ai}
+
+
+@router.post("/reports/{report_id}/narrate")
+def narrate_now(report_id: int, db: Session = Depends(db_session)) -> dict:
+    """Ask Claude for a narrative of this report now (server-side). Refused when the AI layer is disabled."""
+    from ..ai.research import enabled, narrate_report
+    r = db.get(Report, report_id)
+    if r is None:
+        raise HTTPException(404, f"no report {report_id}")
+    if not enabled():
+        raise HTTPException(409, "AI layer disabled: set MI_AI_ENABLED=true and MI_ANTHROPIC_API_KEY on the server")
+    row = narrate_report(db, r)
+    db.commit()
+    return report(report_id, db)
 
 
 @router.get("/jobs")

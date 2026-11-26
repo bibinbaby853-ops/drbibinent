@@ -79,11 +79,23 @@ export function DailyReport() {
   const r = useApi<any>(`/api/v1/reports/latest${kind ? `?kind=${kind}` : ""}`, [kind]);
   const list = useApi<any>("/api/v1/reports?limit=10");
   return (
-    <Page title="AI Daily Report" sub="Today: the deterministic report built from stored data. The optional AI narrative arrives in Phase 10."
+    <Page title="AI Daily Report" sub="The report is built from stored data; an optional Claude commentary appears above it only when every number in it checks out."
       actions={<label className="picker">Report <select value={kind} onChange={(e) => setKind(e.target.value)}>
         <option value="">Latest</option><option value="post_market">Post-market</option><option value="pre_market">Pre-market</option></select></label>}>
       <ErrorBox error={r.error} />
       {r.loading && <Loading what="report" />}
+      {r.data?.ai && (
+        r.data.ai.text ? (
+          <Card title={`AI commentary · ${r.data.ai.model ?? "Claude"}`}>
+            <Notice>Written by Claude from this report's stored data only. All {r.data.ai.grounding?.numbers_checked ?? 0} numbers in it were checked against that data; a commentary with any unsupported number is never shown.</Notice>
+            <div className="report">{md(r.data.ai.text)}</div>
+          </Card>
+        ) : (
+          <Notice>{!r.data.ai.enabled ? "AI commentary is off (optional; set MI_AI_ENABLED and MI_ANTHROPIC_API_KEY on the server). The report below is complete without it."
+            : r.data.ai.status ? `AI commentary not shown: ${r.data.ai.status}${r.data.ai.detail ? ` (${r.data.ai.detail})` : ""}. The report below is unaffected.`
+            : "No AI commentary for this report yet."}</Notice>
+        )
+      )}
       {r.data && (
         <Card>
           <div className="muted small">Generated {new Date(r.data.generated_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST · data as of {r.data.data_as_of}</div>
