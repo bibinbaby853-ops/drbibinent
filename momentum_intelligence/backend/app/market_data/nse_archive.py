@@ -157,9 +157,14 @@ def parse_index_close(raw_csv: bytes, session: date) -> pd.DataFrame:
     df = df[df["_name"].notna()]
     if df.empty:
         raise ValueError("no benchmark index rows in ind_close_all")
-    dates = {datetime.strptime(x, "%d-%m-%Y").date() for x in df["Index Date"] if x}
+    raw_dates = {x for x in df["Index Date"] if x}
+    dates = {datetime.strptime(x, "%d-%m-%Y").date() for x in raw_dates}
     if dates != {session}:
-        raise DataMismatch(f"index close dates {sorted(dates)} do not match session {session}")
+        # A few files (seen: 6, 10, 11 April 2023) are written month-first. Accepted only when that reading is
+        # exactly the session the file was requested for; anything else is a different session and rejected.
+        month_first = {datetime.strptime(x, "%m-%d-%Y").date() for x in raw_dates if int(x[:2]) <= 12}
+        if month_first != {session} or len(month_first) != len(raw_dates):
+            raise DataMismatch(f"index close dates {sorted(dates)} do not match session {session}")
     out = pd.DataFrame({
         "symbol": df["_name"].to_numpy(), "session_date": session,
         "open": _num(df["Open Index Value"]).to_numpy(), "high": _num(df["High Index Value"]).to_numpy(),

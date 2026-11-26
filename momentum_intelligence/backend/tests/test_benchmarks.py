@@ -41,6 +41,14 @@ def test_parse_rejects_another_session_and_files_without_benchmarks():
         n.parse_index_close(ind_csv(D, [f"Nifty Bank,{D:%d-%m-%Y},1,2,0.5,1.5,0,0,1,1,1,1,1"]), D)
 
 
+def test_month_first_dates_are_accepted_only_for_the_requested_session():
+    d = date(2023, 4, 6)
+    row = "Nifty 50,04-06-2023,17533.85,17638.7,17502.85,17599.15,0,0,1,1,1,1,1"   # as NSE published it
+    assert n.parse_index_close(ind_csv(d, [row]), d)["close"].iloc[0] == 17599.15
+    with pytest.raises(DataMismatch):               # neither reading is 7 April: rejected
+        n.parse_index_close(ind_csv(d, [row]), date(2023, 4, 7))
+
+
 def test_provider_fetches_caches_and_reports_unpublished(tmp_path):
     http = FakeHttp({n.index_close_url(D): ind_csv(D)})
     p = n.NSEArchiveProvider(tmp_path, http=http)
