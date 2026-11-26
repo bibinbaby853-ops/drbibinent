@@ -106,3 +106,11 @@ td.wrap { white-space: normal; min-width: 12rem; }
 .acct { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; padding: .5rem 0; border-bottom: 1px solid var(--border); }
 .acct:last-child { border-bottom: 0; }
 .acct-name { font-weight: 600; } .acct-sub { font-size: .75rem; }
+.report h2 { font-size: 1.15rem; margin: .5rem 0; } .report h3 { font-size: .98rem; margin: 1rem 0 .35rem; }
+.report ul { margin: .2rem 0; padding-left: 1.2rem; } .report li.sub { margin-left: 1rem; font-size: .9em; color: var(--muted); }
+.report p { margin: .35rem 0; overflow-wrap: anywhere; }
+.alert-list { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+.alert-row { display: grid; grid-template-columns: auto 1fr auto; gap: .6rem; align-items: start; padding: .6rem .75rem; border-bottom: 1px solid var(--border); }
+.alert-row:last-child { border-bottom: 0; }
+.alert-body { min-width: 0; overflow-wrap: anywhere; }
+.alert-row button { min-height: 32px; padding: .2rem .6rem; }

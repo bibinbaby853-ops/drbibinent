@@ -1,1 +1,1 @@
-"""Not implemented yet. Phase 9: intraday monitoring on completed 15/60-minute candles."""
+"""Intraday monitoring and alerts (Phase 9): rules on completed candles (``rules``), state machine and data (``monitor``)."""

@@ -206,6 +206,8 @@ def summary(db: Session = Depends(db_session)) -> dict:
             "regime": {"name": reg.regime, "score": reg.score, "policy": reg.policy} if reg else None,
             "confirmed_signals": {s: n for s, n in conf}, "top": top, "accounts": accounts(False, db)["accounts"],
             "drawdown_alerts": [{"date": a.session_date, "account": fwd.get(a.account_id), **a.details} for a in alerts],
+            "active_alerts": db.scalar(text("select count(*) from alerts where state = 'active' and session_date = "
+                                            "(select max(session_date) from alerts)")) or 0,
             "evidence": None if holdout is None else {"run": holdout.name, "return_pct": holdout.metrics.get("total_return_pct"),
                                                      "bench_pct": holdout.metrics.get("bench_total_return_pct"),
                                                      "period": [holdout.start, holdout.end]},

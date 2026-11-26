@@ -13,8 +13,8 @@ architectural changes. Nothing is reported as working unless its tests pass.
 | 5 | Strategy engine (Breakout, Pullback, Continuation), signal state machine, de-duplication | Rule fixtures per strategy, invalidation, duplicate suppression | **Done** (confirmed) |
 | 6 | Risk engine and persistent paper portfolio | Position sizing, every limit, sector exposure, cash reserve, aggregate risk, correlation, idempotent execution, charges, partial exits, trailing stops, accounting reconciliation | **Done** (confirmed; built before Phase 5 at the owner's request) |
 | 7 | Backtesting (event-driven, walk-forward, out-of-sample, sensitivity, metrics vs Nifty 50) | Metric formulas on fixtures, no look-ahead, point-in-time universe used, cost and slippage applied | **Done** (confirmed; redesign failed the holdout, see ARCHITECTURE 8.9) |
-| 8 | Dashboard (14 pages, mobile-first, charts) | API contract tests, UI build, Android-width screenshots | **Done, awaiting confirmation** |
-| 9 | Intraday monitoring, scheduler, alerts, automated reports | Completed-candle only, alert states, job idempotency, report timestamps and sources | Not started |
+| 8 | Dashboard (14 pages, mobile-first, charts) | API contract tests, UI build, Android-width screenshots | **Done** (confirmed) |
+| 9 | Intraday monitoring, scheduler, alerts, automated reports | Completed-candle only, alert states, job idempotency, report timestamps and sources | **Done, awaiting confirmation** |
 | 10 | Optional Claude research layer | Grounding check rejects unsupported numbers; works with AI disabled | Not started |
 | 11 | Hardening, deployment, backup/restore, docs | Full test suite, migration from empty DB, backup/restore drill, acceptance checklist | Not started |
 

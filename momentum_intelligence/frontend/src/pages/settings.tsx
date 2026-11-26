@@ -93,7 +93,7 @@ export function Settings() {
       {hist.data && (
         <Card title="Change history">
           <Table rows={hist.data.history} empty="No changes saved; built-in defaults apply." cols={[
-            { key: "updated_at", label: "When", render: (r) => new Date(r.updated_at).toLocaleString("en-IN") },
+            { key: "updated_at", label: "When", render: (r) => new Date(r.updated_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) },
             { key: "changes", label: "Changes", render: (r) => r.changes.map((c: any) => `${c.path}: ${String(c.from)} → ${String(c.to)}`).join("; ") || "—" },
             { key: "note", label: "Note", render: (r) => r.note ?? "—" },
           ]} />

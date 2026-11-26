@@ -1,5 +1,4 @@
-# Momentum Intelligence: Phase 1 services (database + API).
-# Phase 9 adds the "scheduler" service and Phase 8 the "web" frontend service.
+# Momentum Intelligence: database, API + dashboard (same image), scheduler (end of day, intraday alerts, reports).
 # Secrets come from .env (never committed); see .env.example.
 services:
   db:
@@ -31,6 +30,28 @@ services:
       MI_DATABASE_URL: postgresql+psycopg://${MI_DB_USER:-momentum}:${MI_DB_PASSWORD}@db:5432/${MI_DB_NAME:-momentum}
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/srv/data
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started   # the api container applies migrations on start
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MI_DATABASE_URL: postgresql+psycopg://${MI_DB_USER:-momentum}:${MI_DB_PASSWORD}@db:5432/${MI_DB_NAME:-momentum}
+      MI_DATA_MODE: live
+    command: ["python", "-m", "app.scheduler.service"]
+    healthcheck:
+      disable: true
     volumes:
       - ./data:/srv/data
 

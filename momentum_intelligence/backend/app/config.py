@@ -172,6 +172,21 @@ class StrategyRules(BaseModel):
         return self
 
 
+class AlertConfig(BaseModel):
+    """Intraday alert thresholds (Phase 9). Evaluated on completed 15-minute candles only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    stop_proximity_pct: float = Field(1.5, gt=0)     # position: completed-bar low within this % above its stop
+    approach_pct: float = Field(1.0, gt=0)           # watchlist: within this % below the trigger level
+    volume_pace: float = Field(1.5, gt=0)            # cumulative volume vs. 20-day average x elapsed share of the session
+    volume_pace_after_minutes: int = Field(60, ge=15)
+    rs_lag_pct: float = Field(3.0, gt=0)             # position: lagging the Nifty 50 by this much today
+    index_drop_pct: float = Field(2.0, gt=0)         # Nifty 50 down this much from the previous close
+    vix_jump_pct: float = Field(15.0, gt=0)
+    max_symbols: int = Field(150, ge=1, le=500)      # Yahoo politeness
+
+
 Regime = Literal["strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish"]
 REGIMES: tuple[str, ...] = ("strong_bullish", "moderately_bullish", "sideways", "moderately_bearish", "strong_bearish")
 
@@ -295,6 +310,7 @@ class StrategyConfig(BaseModel):
     execution: ExecutionConfig = ExecutionConfig()
     exits: ExitConfig = ExitConfig()
     strategies: StrategyRules = StrategyRules()
+    alerts: AlertConfig = AlertConfig()
 
     score_weights: ScoreWeights = ScoreWeights()
     score_bands: ScoreBands = ScoreBands()

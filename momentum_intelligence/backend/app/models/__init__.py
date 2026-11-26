@@ -535,3 +535,67 @@ class AppSetting(Base):
     note: Mapped[str | None] = mapped_column(Text)
     updated_by: Mapped[str] = mapped_column(String(60), default="dashboard")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# ---------------------------------------------------------------- Phase 9: jobs, alerts, reports
+
+class JobRun(Base):
+    """Every scheduled job execution: idempotent per (job, key); a success is never repeated for the same key."""
+
+    __tablename__ = "job_runs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    job: Mapped[str] = mapped_column(String(40))
+    key: Mapped[str] = mapped_column(String(60))          # e.g. session date, or date + 15-minute slot
+    status: Mapped[str] = mapped_column(String(10))       # running | success | skipped | failed
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    details: Mapped[dict] = mapped_column(JSONB, default=dict)
+    error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (Index("ix_job_runs_job_key", "job", "key"),)
+
+
+class Alert(Base):
+    """Intraday alert. One row per (session, rule, symbol, account); state: active -> resolved / acknowledged / expired."""
+
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_date: Mapped[date] = mapped_column(Date)
+    rule: Mapped[str] = mapped_column(String(30))
+    symbol: Mapped[str] = mapped_column(String(40))
+    stock_id: Mapped[int | None] = mapped_column(ForeignKey("stocks.id", ondelete="CASCADE"))
+    account: Mapped[str] = mapped_column(String(60), default="")
+    severity: Mapped[str] = mapped_column(String(10))     # info | warning | critical
+    state: Mapped[str] = mapped_column(String(14))        # active | resolved | acknowledged | expired
+    message: Mapped[str] = mapped_column(Text)
+    values: Mapped[dict] = mapped_column(JSONB, default=dict)
+    source: Mapped[str] = mapped_column(Text)
+    bar_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))   # end of the completed candle it relied on
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    checks: Mapped[int] = mapped_column(Integer, default=1)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("session_date", "rule", "symbol", "account", name="uq_alert"),
+                      Index("ix_alerts_session_state", "session_date", "state"))
+
+
+class Report(Base):
+    """Generated daily report (pre-market / post-market). Built only from stored data; sources listed."""
+
+    __tablename__ = "reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))         # pre_market | post_market
+    session_date: Mapped[date] = mapped_column(Date)      # the completed session the data describes
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    data_as_of: Mapped[str] = mapped_column(String(60))
+    sources: Mapped[list] = mapped_column(JSONB, default=list)
+    content_md: Mapped[str] = mapped_column(Text)
+    data: Mapped[dict] = mapped_column(JSONB, default=dict)
+    version: Mapped[str] = mapped_column(String(10), default="1")
+
+    __table_args__ = (UniqueConstraint("kind", "session_date", "version", name="uq_report"),)

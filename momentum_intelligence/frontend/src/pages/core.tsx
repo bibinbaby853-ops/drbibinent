@@ -17,6 +17,7 @@ export function CommandCentre() {
             <Stat label="Regime score" value={fmt.n(data.regime?.score, 0)} />
             <Stat label="New entries allowed" value={data.regime?.policy?.allow_new_entries ? `yes, up to ${data.regime.policy.max_new_entries_per_day}/day` : "no"} />
             <Stat label="Confirmed setups today" value={Object.values(data.confirmed_signals ?? {}).reduce((a: number, b: any) => a + b, 0)} />
+            <Stat label="Active alerts" value={<Link to="/intraday">{data.active_alerts ?? 0}</Link>} tone={(data.active_alerts ?? 0) > 0 ? "warn" : undefined} />
           </div>
           <div className="grid two">
             <Card title="Forward test (paper accounts)">

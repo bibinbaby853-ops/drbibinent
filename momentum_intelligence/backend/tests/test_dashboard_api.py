@@ -21,7 +21,7 @@ def client():
     command.upgrade(Config("alembic.ini"), "head")
     from app.main import create_app
     with session_scope() as db:
-        db.execute(text("truncate app_settings, signal_events, trade_signals, trade_journal, risk_events, portfolio_snapshots, "
+        db.execute(text("truncate alerts, reports, job_runs, app_settings, signal_events, trade_signals, trade_journal, risk_events, portfolio_snapshots, "
                         "paper_orders, paper_positions, trade_proposals, paper_accounts, momentum_scores, relative_strength, "
                         "sector_data, market_regime, stock_universe_snapshots, technical_indicators, surveillance_flags, market_candles, "
                         "corporate_actions, data_quality_issues, stock_symbol_history, stocks, trading_sessions, data_provider_logs, "
@@ -109,3 +109,42 @@ def test_health_reports_latest_session(client):
     c, _ = client
     h = c.get("/api/health").json()
     assert h["execution_mode"] == "paper" and "latest_session" in h
+
+
+def test_reports_carry_timestamps_sources_and_are_regenerated_in_place(client):
+    from app.config import default_strategy_config
+    from app.database import session_scope
+    from app.models import Report
+    from app.reports.daily import SOURCES, generate
+    from sqlalchemy import func, select
+    c, days = client
+    with session_scope() as db:
+        r = generate(db, "post_market", default_strategy_config(), days[-1])
+        md, data = r.content_md, r.data
+    assert f"session {days[-1]}" in md and "Generated 20" in md and "IST" in md
+    assert "## Sources" in md and all(s["licence"] in md for s in SOURCES)
+    assert "not investment advice" in md and "no out-of-sample edge" in md
+    assert data["session_date"] == days[-1].isoformat() and data["regime"]["name"]
+    with session_scope() as db:
+        generate(db, "post_market", default_strategy_config(), days[-1])
+        generate(db, "pre_market", default_strategy_config(), days[-1])
+        assert db.scalar(select(func.count()).select_from(Report)) == 2          # regenerated in place, not duplicated
+    latest = c.get("/api/v1/reports/latest", params={"kind": "post_market"}).json()
+    assert latest["session_date"] == days[-1].isoformat() and latest["sources"] and "15:30 IST" in latest["data_as_of"]
+    assert len(c.get("/api/v1/reports").json()["reports"]) == 2
+    assert c.get("/api/v1/reports/999999").status_code == 404
+
+
+def test_alert_and_job_endpoints(client):
+    from app.alerts.monitor import apply
+    from app.alerts.rules import Candidate
+    from app.database import session_scope
+    c, days = client
+    with session_scope() as db:
+        apply(db, days[-1], [Candidate("stop_proximity", "DEMO01", "near stop", None, {"low": 1.0}, account="x")])
+    r = c.get("/api/v1/alerts", params={"date": days[-1].isoformat()}).json()
+    assert r["alerts"][0]["state"] == "active" and "completed candles" in r["note"]
+    ack = c.post(f"/api/v1/alerts/{r['alerts'][0]['id']}/ack").json()
+    assert ack["state"] == "acknowledged" and ack["acknowledged_at"]
+    assert c.post("/api/v1/alerts/999999/ack").status_code == 404
+    assert "runs" in c.get("/api/v1/jobs").json()

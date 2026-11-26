@@ -278,18 +278,40 @@ membership.
 * `data/processed/`: Parquet panels for fast backtests.
 * `data/cache/`: disposable HTTP caches.
 
-## 7. Processing pipelines (all times IST, NSE trading days only)
+## 7. Processing pipelines (all times IST)
 
-| Job | When | Steps |
-|---|---|---|
-| Pre-market | 08:30 | Load last completed session, regime, watchlist, portfolio risk, report |
-| Intraday monitor | every 15 minutes, 09:30 to 15:30, on **completed** candles | Breakout, volume, approach-to-entry, stop proximity, RS weakening, regime change alerts |
-| Post-market provisional | 16:00 | Run on provider closes (Yahoo); label provisional |
-| End-of-day final | when the NSE bhavcopy appears (polled from 18:00) | Ingest, validate, adjust, universe snapshot, indicators, RS, sectors, regime, scores, signals, risk-checked paper orders for next open, portfolio snapshot, post-market report |
-| Next open execution | 09:15 + first completed candle | Fill queued paper orders at next-bar open with slippage |
+Implemented in Phase 9 (`app/scheduler/service.py`, APScheduler, `python -m app.scheduler.service`;
+a `scheduler` service in Docker Compose). Every job runs through `jobs.run_job`: a Postgres
+advisory lock per job (a second process gets `locked`), idempotent per key (a success is never
+repeated), and a `job_runs` row with start, end, outcome, details and any error.
 
-Each job takes a Postgres advisory lock, is idempotent (keyed by session
-date), and records start, end, inputs and outcome.
+| Job | Trigger | Key | Steps |
+|---|---|---|---|
+| Pre-market | Mon-Fri 08:30 | date | expire earlier alerts; pre-market report |
+| Intraday monitor | Mon-Fri every 15 min, 09:30-15:45 | date + slot | completed 15-minute candles (Yahoo) for positions, entries queued for the open, and setups; alerts (section 8.10) |
+| End of day | every day, every 20 min, 18:00-23:40 | date | `scheduler.eod`: ingest, adjustments, split confirmation, reference data, indices, universe, scores, signals per configuration in use, every paper account; then the post-market report. Records `skipped` and retries until the day's NSE session is stored; weekends included for special sessions |
+
+Paper fills at the next open are booked by the end-of-day run of that session, at its official
+open price: the same price a 09:15 job would use, without depending on an intraday feed. The
+earlier plan's "post-market provisional" run on Yahoo closes is not implemented: the NSE
+bhavcopy arrives the same evening and is the only source used for decisions.
+
+### 8.10 Intraday alerts (`app/alerts/`)
+Rules on completed candles only (the provider drops the candle still forming): stop breached,
+stop proximity (1.5%), lagging the Nifty 50 (3 points), breakout trigger crossed, approaching a
+trigger (1%), volume pace (1.5x the 20-day pace, after the first hour), Nifty 50 down 2%, India
+VIX up 15%, and price discontinuity (below 65% of the previous close: a probable split pauses the
+other rules for that stock). Thresholds are settings. Alert states: active, resolved (non-sticky
+rules whose condition stopped), acknowledged (by the user), expired (next pre-market). One alert
+per session, rule, symbol and account. The watch set puts positions and today's entries first
+and never drops them for the symbol cap (150). Alerts never place or change orders.
+
+### 8.11 Daily reports (`app/reports/daily.py`)
+Pre-market and post-market reports built from stored data only: regime and policy, breadth,
+universe size, sector leaders and laggards, confirmed setups, forward-test accounts (fills,
+pending orders, positions, reconciliation), intraday alert counts, data-quality issues. Each
+states its generation time (IST), the completed session it describes, and every source with its
+licence. Regenerating a report replaces it (one per kind and session).
 
 ## 8. Domain logic
 

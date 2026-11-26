@@ -4,8 +4,8 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: Phases 1-8 complete; Phase 8 (dashboard) awaiting confirmation.**
-Intraday alerts, the AI report and hardening follow. See `docs/PHASES.md`.
+**Status: Phases 1-9 complete; Phase 9 (scheduler, intraday alerts, reports) awaiting
+confirmation.** The optional AI narrative and hardening follow. See `docs/PHASES.md`.
 Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 8.9); three forward paper accounts are the ongoing test.
 
@@ -36,7 +36,8 @@ Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 ```bash
 cd frontend && npm ci && npm run build      # once, or after frontend changes
 cd ../backend && uvicorn app.main:app       # dashboard at http://localhost:8000, API under /api
-python -m app.scheduler.eod                 # after the NSE close (bhavcopy ~19:00 IST): updates everything
+python -m app.scheduler.service             # scheduler: pre-market 08:30, intraday alerts 09:30-15:45, end of day from 18:00
+python -m app.scheduler.service once eod    # or run one job now (pre_market | intraday | eod), e.g. from cron
 node ../frontend/scripts/mobile-check.cjs http://127.0.0.1:8000 screens   # 360 px check of every page
 ```
 

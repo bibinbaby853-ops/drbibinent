@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useApi } from "./api";
 import { CommandCentre, MarketOverview, Phase, SectorRotation } from "./pages/core";
+import { DailyReport, IntradayMonitoring } from "./pages/monitor";
 import { BacktestingLab, PaperPortfolio, RiskAnalytics, TradeJournal } from "./pages/portfolio";
 import { Scanner, StockDetail, TopOpportunities, Watchlist } from "./pages/scan";
 import { Settings } from "./pages/settings";
@@ -51,11 +52,11 @@ function Shell() {
           <Route path="/pullbacks" element={<Watchlist strategy="pullback" title="Pullback Watchlist" />} />
           <Route path="/sectors" element={<SectorRotation />} />
           <Route path="/portfolio" element={<PaperPortfolio />} />
-          <Route path="/intraday" element={<Phase title="Intraday Monitoring" phase={9} what="It will watch completed 15- and 60-minute candles for breakouts, volume, stop proximity and regime changes, and raise alerts." />} />
+          <Route path="/intraday" element={<IntradayMonitoring />} />
           <Route path="/risk" element={<RiskAnalytics />} />
           <Route path="/backtests" element={<BacktestingLab />} />
           <Route path="/journal" element={<TradeJournal />} />
-          <Route path="/report" element={<Phase title="AI Daily Report" phase={10} what="An optional Claude-written narrative of the day's verified data; every number in it must match the stored data." />} />
+          <Route path="/report" element={<DailyReport />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/stock/:symbol" element={<StockDetail />} />
           <Route path="*" element={<Phase title="Not found" phase={8} what="This address does not match a page." />} />
