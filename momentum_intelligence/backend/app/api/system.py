@@ -19,12 +19,38 @@ from .deps import Authed, db_session
 router = APIRouter()
 
 
+STALE_AFTER_WEEKDAYS = 2   # tolerates one exchange holiday without a false alarm
+
+
 @router.get("/api/health")
 def health() -> dict:
+    """Liveness plus the two things that silently go wrong: stale data and failing jobs.
+
+    Unauthenticated (for uptime monitors), so it carries counts and dates only, never error text or data.
+    ``status`` is "degraded" when the database is unreachable, live data is stale, or a job failed in 24 h.
+    """
     s = get_settings()
     db_ok, db_detail = ping()
+    latest = _latest_session() if db_ok else None
+    fresh = _freshness(latest) if db_ok else None
+    jobs = _jobs() if db_ok else None
+    problems = [] if db_ok else ["database unreachable"]
+    if db_ok and latest is None:
+        problems.append("no NSE sessions loaded yet (see docs/DEPLOYMENT.md, first data load)")
+    elif fresh and fresh["stale"] and s.data_mode == "live":
+        problems.append(f"data stale: {fresh['missing_weekdays']} expected sessions missing")
+    if fresh and s.data_mode == "live":
+        behind: dict = {}
+        for name, last in (fresh.get("benchmarks") or {}).items():
+            if latest and (last is None or last < latest):
+                behind.setdefault(last, []).append(name)
+        for last, names in behind.items():
+            problems.append(f"{', '.join(names)} (Yahoo) last {last or 'never'}; carried forward for {latest}")
+    if jobs and jobs["failures_24h"]:
+        problems.append(f"{jobs['failures_24h']} job failure(s) in 24 h")
     return {
-        "status": "ok" if db_ok else "degraded",
+        "status": "ok" if not problems else "degraded",
+        "problems": problems,
         "version": __version__,
         "time_ist": datetime.now(ZoneInfo(s.timezone)).isoformat(timespec="seconds"),
         "environment": s.app_env,
@@ -33,8 +59,57 @@ def health() -> dict:
         "execution_mode": "paper",
         "database": {"reachable": db_ok, "detail": db_detail},
         "ai_enabled": bool(s.ai_enabled and s.anthropic_api_key),
-        "latest_session": _latest_session() if db_ok else None,
+        "latest_session": latest,
+        "data_freshness": fresh,
+        "jobs": jobs,
     }
+
+
+def _freshness(latest) -> dict | None:
+    from datetime import timedelta
+    from ..market_data.calendar import bhavcopy_expected, now_ist
+    if latest is None:
+        return {"stale": True, "missing_weekdays": None, "benchmarks": _benchmarks()}
+    today = now_ist().date()
+    expected = today if bhavcopy_expected(today) else today - timedelta(days=1)
+    missing, d = 0, latest + timedelta(days=1)
+    while d <= expected:
+        missing += d.weekday() < 5
+        d += timedelta(days=1)
+    return {"stale": missing > STALE_AFTER_WEEKDAYS, "missing_weekdays": missing, "benchmarks": _benchmarks()}
+
+
+def _benchmarks() -> dict:
+    """Last stored session per benchmark. Scoring carries a missing index bar forward for up to 3 sessions
+    (scoring/panel.py), so a benchmark behind the latest NSE session means figures use a stale index value."""
+    from sqlalchemy import func
+    from ..database import _factory
+    from ..models import MarketCandle, Stock
+    names = ("NIFTY 50", "NIFTY 500", "INDIA VIX")
+    try:
+        with _factory()() as db:
+            rows = dict(db.execute(select(Stock.symbol, func.max(MarketCandle.session_date)).join(MarketCandle, MarketCandle.stock_id == Stock.id)
+                                   .where(Stock.kind == "index", Stock.symbol.in_(names)).group_by(Stock.symbol)).all())
+    except Exception:  # noqa: BLE001
+        return {}
+    return {n: rows.get(n) for n in names}
+
+
+def _jobs() -> dict | None:
+    from datetime import timedelta, timezone
+    from sqlalchemy import func
+    from ..database import _factory
+    from ..models import JobRun
+    try:
+        with _factory()() as db:
+            since = datetime.now(timezone.utc) - timedelta(hours=24)
+            last = dict(db.execute(select(JobRun.job, func.max(JobRun.finished_at)).where(JobRun.status == "success")
+                                   .group_by(JobRun.job)).all())
+            failures = db.scalar(select(func.count()).select_from(JobRun).where(JobRun.status == "failed",
+                                                                               JobRun.started_at >= since))
+    except Exception:  # noqa: BLE001 - table missing before migrations
+        return None
+    return {"last_success": {k: v.isoformat(timespec="seconds") for k, v in last.items() if v}, "failures_24h": failures}
 
 
 def _latest_session():

@@ -15,10 +15,12 @@ architectural changes. Nothing is reported as working unless its tests pass.
 | 7 | Backtesting (event-driven, walk-forward, out-of-sample, sensitivity, metrics vs Nifty 50) | Metric formulas on fixtures, no look-ahead, point-in-time universe used, cost and slippage applied | **Done** (confirmed; redesign failed the holdout, see ARCHITECTURE 8.9) |
 | 8 | Dashboard (14 pages, mobile-first, charts) | API contract tests, UI build, Android-width screenshots | **Done** (confirmed) |
 | 9 | Intraday monitoring, scheduler, alerts, automated reports | Completed-candle only, alert states, job idempotency, report timestamps and sources | **Done** (confirmed) |
-| 10 | Optional Claude research layer | Grounding check rejects unsupported numbers; works with AI disabled | **Done, awaiting confirmation** (live API call pending a key) |
-| 11 | Hardening, deployment, backup/restore, docs | Full test suite, migration from empty DB, backup/restore drill, acceptance checklist | Not started |
+| 10 | Optional Claude research layer | Grounding check rejects unsupported numbers; works with AI disabled | **Done** (confirmed; live API call pending a key) |
+| 11 | Hardening, deployment, backup/restore, docs | Full test suite, migration from empty DB, backup/restore drill, acceptance checklist | **Done, awaiting confirmation** (see `docs/ACCEPTANCE.md`; ADR-018 awaiting decision) |
 
 ## Final acceptance checklist (brief section 22)
+
+Results and evidence: `docs/ACCEPTANCE.md`.
 
 | # | Criterion | Verified by | Phase |
 |---|---|---|---|

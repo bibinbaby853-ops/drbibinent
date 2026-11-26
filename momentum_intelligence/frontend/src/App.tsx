@@ -43,6 +43,11 @@ function Shell() {
       </nav>
       {open && <div className="scrim" onClick={() => setOpen(false)} />}
       <main className="content">
+        {h?.status === "degraded" && (
+          <div className="degraded" role="status">
+            System degraded: {(h.problems ?? []).join("; ") || "see /api/health"}. Figures may be out of date.
+          </div>
+        )}
         <Routes>
           <Route path="/" element={<CommandCentre />} />
           <Route path="/market" element={<MarketOverview />} />

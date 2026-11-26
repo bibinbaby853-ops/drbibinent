@@ -717,26 +717,43 @@ checks what is missing rather than assuming. Forward-test accounts `fwd-D0`,
   anyone using that environment) or in the deployment's `.env`. Verified here with a test
   client; the live call is pending a key.
 
-## 13. Security
+## 13. Security (as built, Phase 11)
 
-Secrets only in environment variables or a secrets manager, `.env` ignored by
-git, `.env.example` documents names only. No broker order client exists in
-the codebase. CORS restricted to the dashboard origin. Settings changes are
-audited. Dependencies pinned.
+* Secrets only in environment variables (`.env` on the server, mode 600, git-ignored); `.env.example` holds
+  names and placeholders. Tests scan every tracked file for key patterns and the frontend source for
+  credentials.
+* Production start-up (`app/security.py`) refuses: no or short API token (< 32 characters), a default or
+  example database password, demo data, AI enabled without a key. Applies to the API and the scheduler.
+* One bearer token guards every data endpoint (constant-time comparison). Distinct wrong tokens are
+  throttled per client (10 in 5 minutes → HTTP 429); repeated stale tokens and missing tokens are not counted.
+* Same-origin dashboard: no CORS headers are sent, so other sites cannot call the API from a browser.
+  Strict Content-Security-Policy (`script-src 'self'`), `frame-ancestors 'none'`, `nosniff`, no referrer,
+  `no-store` on API responses, 1 MB request limit, API docs disabled in production.
+* HTTPS terminated by Caddy (automatic certificates, HSTS); the API listens on the internal network and
+  127.0.0.1 only.
+* Containers: non-root user, read-only root filesystem, all capabilities dropped, `no-new-privileges`,
+  rotated logs. Python dependencies locked to exact versions (`backend/requirements.lock`) and the test suite
+  run inside the built image.
+* No broker order client exists; a test fails the build if one appears. Settings changes are audited.
 
-## 14. Observability
+## 14. Observability (as built)
 
-Structured JSON logs; `data_provider_logs` for lineage; `risk_events` and
-`trade_journal` for decisions; `/api/health` reports database, data freshness
-and scheduler heartbeats; stale-data and job-failure alerts.
+* Logs: plain text (`time level logger message`) to stdout, collected by Docker with rotation.
+* `/api/health`: database, latest NSE session, data freshness (missing weekdays; one holiday tolerated),
+  last stored session per benchmark index, last success per job, failures in 24 h, and a `problems` list;
+  `status` is `degraded` when any problem exists. The dashboard shows the problems in a banner.
+* `job_runs` (every scheduled run with status and error), `data_provider_logs` (lineage), `risk_events` and
+  `trade_journal` (decisions), `alerts`, `reports`, `ai_narratives`.
+* `scripts/acceptance.py` checks the brief's acceptance criteria against a running system.
 
-## 15. Deployment
+## 15. Deployment (as built)
 
-Docker Compose services: `db` (PostgreSQL 16 with a named volume), `api`
-(FastAPI), `scheduler` (same image, scheduler entry point), `web` (static
-frontend behind nginx). Migrations run with `alembic upgrade head` before the
-API starts. Backups: nightly `pg_dump` with retention; restore with
-`pg_restore`. Documented in `docs/DEPLOYMENT.md` (Phase 11).
+Docker Compose services: `db` (PostgreSQL 16, named volume), `api` (FastAPI serving the API and the built
+dashboard; applies migrations on start), `scheduler` (same image), optional `proxy` (Caddy, `https`
+profile). Backups: `scripts/backup.sh` (custom-format `pg_dump`, checksum, retention), `scripts/restore.sh`
+(checksum-verified, refuses unsafe overwrites), `scripts/restore_drill.sh` (restore into a throw-away
+database and compare content fingerprints). Built, run in production mode, restored, drilled and smoke-tested
+in Phase 11. Procedures: `docs/DEPLOYMENT.md`, `docs/RUNBOOK.md`; evidence: `docs/ACCEPTANCE.md`.
 
 ## 16. Testing strategy
 
@@ -765,8 +782,11 @@ package; the old scanner stays usable until the new one replaces it.
   N/A.
 * Historical sector classification is current, not point in time.
 * India VIX history depends on Yahoo availability.
-* Docker cannot be executed in this sandbox; container deployment is
-  validated statically and must be smoke-tested on the target host.
+* Benchmarks (Nifty 50, Nifty 500, India VIX) come from Yahoo, which can lag NSE by a session. Scoring
+  carries a missing index bar forward for up to 3 sessions; this was undocumented until Phase 11 and is now
+  reported by `/api/health`. On 25 Nov 2026 the carried Nifty 50 value was 1.85% below the official close.
+  Switching to NSE's official index file is proposed in ADR-018 (awaiting decision).
+* The login throttle and the configuration cache are per process; the deployment runs one API process.
 
 ## 19. Requirements traceability
 
@@ -793,4 +813,4 @@ package; the old scanner stays usable until the new one replaces it.
 | 19 Testing | `backend/tests/` | every phase |
 | 20 Deployment | `docker-compose.yml`, `docs/DEPLOYMENT.md` | 1, 11 |
 | 21 Workflow | `docs/PHASES.md` | every phase |
-| 22 Acceptance | `docs/PHASES.md` acceptance table | 11 |
+| 22 Acceptance | `docs/ACCEPTANCE.md`, `scripts/acceptance.py` | 11 |

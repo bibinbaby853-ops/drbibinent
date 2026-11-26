@@ -58,3 +58,55 @@ def test_backtest_endpoints_report_missing_runs():
     assert c.get("/api/v1/backtests/999999").status_code == 404
     r = c.get("/api/v1/backtests")
     assert r.status_code == 200 and "Past results" in r.json()["note"]
+
+
+def test_health_flags_stale_data_with_one_holiday_of_tolerance(monkeypatch):
+    from datetime import date, datetime
+    from app.api import system
+    from app.market_data import calendar
+    from app.market_data.calendar import IST
+    monkeypatch.setattr(calendar, "now_ist", lambda: datetime(2026, 11, 27, 20, 0, tzinfo=IST))   # Friday evening
+    f = lambda d: {k: v for k, v in system._freshness(d).items() if k != "benchmarks"}   # noqa: E731
+    assert f(date(2026, 11, 26)) == {"stale": False, "missing_weekdays": 1}       # e.g. a holiday
+    assert f(date(2026, 11, 25)) == {"stale": False, "missing_weekdays": 2}
+    assert f(date(2026, 11, 23)) == {"stale": True, "missing_weekdays": 4}
+    monkeypatch.setattr(calendar, "now_ist", lambda: datetime(2026, 11, 30, 9, 0, tzinfo=IST))    # Monday morning
+    assert system._freshness(date(2026, 11, 27))["missing_weekdays"] == 0                         # weekend is not missing
+    assert system._freshness(None)["stale"] is True
+
+
+def test_health_degrades_on_a_recent_job_failure_without_exposing_the_error():
+    from sqlalchemy import text
+    from app.database import get_engine
+    with get_engine().begin() as c:
+        c.execute(text("insert into job_runs (job, key, status, started_at, details, error) "
+                       "values ('eod', 'health-test', 'failed', now(), '{}', 'secret detail')"))
+    try:
+        body = client.get("/api/health").json()
+        assert body["status"] == "degraded" and body["jobs"]["failures_24h"] >= 1
+        assert "secret detail" not in str(body)
+    finally:
+        with get_engine().begin() as c:
+            c.execute(text("delete from job_runs where key = 'health-test'"))
+
+
+def test_health_names_a_benchmark_carried_forward_in_live_mode(monkeypatch):
+    from datetime import date
+    from app.api import system
+    from app.config import get_settings
+    monkeypatch.setattr(system, "_latest_session", lambda: date(2026, 11, 25))
+    monkeypatch.setattr(system, "_benchmarks", lambda: {"NIFTY 50": date(2026, 11, 23), "NIFTY 500": date(2026, 11, 25),
+                                                        "INDIA VIX": None, "OTHER": date(2026, 11, 23)})
+    monkeypatch.setattr(get_settings(), "data_mode", "live")
+    body = client.get("/api/health").json()
+    assert body["status"] == "degraded"
+    assert "NIFTY 50, OTHER (Yahoo) last 2026-11-23; carried forward for 2026-11-25" in body["problems"]
+    assert "INDIA VIX (Yahoo) last never; carried forward for 2026-11-25" in body["problems"]
+    assert not any("NIFTY 500" in p for p in body["problems"])
+
+
+def test_health_on_an_empty_database_says_so(monkeypatch):
+    from app.api import system
+    monkeypatch.setattr(system, "_latest_session", lambda: None)
+    body = client.get("/api/health").json()
+    assert body["status"] == "degraded" and body["problems"][0].startswith("no NSE sessions loaded yet")

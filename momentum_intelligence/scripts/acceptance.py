@@ -205,7 +205,8 @@ def _(n, what):
 
 
 print(f"Acceptance check against {BASE} ({health.get('environment')}, data mode {health.get('data_mode')}, "
-      f"latest session {health.get('latest_session')})\n")
+      f"latest session {health.get('latest_session')})")
+print(f"health: {health.get('status')}" + (f" - {'; '.join(health.get('problems') or [])}" if health.get("problems") else "") + "\n")
 for n, status, what, ev in sorted(results):
     print(f"{n:>2}. {status:<4} {what}\n      {ev}")
 fails = sum(1 for r in results if r[1] == "FAIL")

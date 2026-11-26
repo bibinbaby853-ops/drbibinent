@@ -4,8 +4,9 @@ Positional (2-8 week) momentum research and **paper** portfolio management for
 NSE equities. Deterministic, auditable rules; risk-first position sizing; no
 live order placement anywhere in the codebase.
 
-**Status: Phases 1-10 complete; Phase 10 (optional Claude commentary) awaiting
-confirmation.** Hardening and deployment follow. See `docs/PHASES.md`.
+**Status: all 11 phases built; Phase 11 (hardening, deployment, backup/restore) awaiting
+confirmation, and ADR-018 (official NSE index closes for benchmarks) awaiting a decision.**
+See `docs/PHASES.md` and `docs/ACCEPTANCE.md`.
 Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 8.9); three forward paper accounts are the ongoing test.
 
@@ -14,13 +15,16 @@ Backtests show no out-of-sample edge for these rules (`docs/ARCHITECTURE.md`
 * `docs/ARCHITECTURE.md` - system design, data sources and licensing, schema, API, risk rules, traceability to the brief
 * `docs/DECISIONS.md` - architecture decision records, including those awaiting confirmation
 * `docs/PHASES.md` - phase plan, exit tests and the final acceptance checklist
+* `docs/ACCEPTANCE.md` - acceptance results with evidence
+* `docs/DEPLOYMENT.md` - server set-up, HTTPS, security model, updates
+* `docs/RUNBOOK.md` - daily operation, health, backups and restore, troubleshooting
 
 ## What works today
 
 * Validated configuration with every setting from the brief (capital ₹100,000, 5 positions, 0.5% risk, 20% / 30% exposure caps, 20% cash, 2.5% aggregate risk, ₹5 Cr liquidity, score weights and bands). Inconsistent settings and any non-paper execution mode are rejected at start-up.
-* FastAPI service: `GET /api/health`, `GET /api/v1/settings`, OpenAPI docs at `/docs`.
+* FastAPI service: `GET /api/health` (database, data freshness, benchmark lag, job failures), settings, OpenAPI docs at `/docs` (off in production).
 * PostgreSQL connectivity (development and test databases).
-* Environment checker and Docker Compose definition (database + API).
+* Environment checker; Docker deployment (database, API + dashboard, scheduler, optional HTTPS proxy), hardened and tested in production mode; backup, restore and restore-drill scripts.
 * Market data engine (`backend/app/market_data/`): NSE official end-of-day archives (primary), Yahoo (unofficial; intraday, indices, split cross-check), labelled DEMO data, and a Kite adapter that honestly reports it is unavailable here. Polite HTTP with rate limits and retries, raw file cache with SHA-256 lineage, data-quality checks, ISIN-based identity across symbol and ISIN changes, corporate-action factors and adjusted series, Alembic schema.
 
 * Universe engine (`backend/app/universe/`): point-in-time eligibility for every session with reason codes (series, liquidity, history, data quality, unconfirmed corporate actions, GSM), reproducible snapshots keyed by rule hash.
@@ -88,16 +92,16 @@ python -m pytest -q                          # from backend/
 ## Docker
 
 ```bash
-cp .env.example .env    # set MI_DB_PASSWORD
-docker compose up -d --build
+cp .env.example .env && chmod 600 .env       # production values: docs/DEPLOYMENT.md
+docker compose build
+docker compose --profile https up -d         # or without --profile https behind a VPN/SSH tunnel
+scripts/backup.sh --compose                  # nightly from cron; scripts/restore_drill.sh --compose monthly
 ```
-
-Docker could not be executed in the build sandbox (no daemon); the compose file
-is validated with `docker compose config`. Smoke-test it on the target host.
 
 ## Safety
 
 * Paper trading only. There is no broker order client; a test fails the build if one appears.
 * Secrets are read from the environment, never returned by the API and never committed.
+* Production refuses to start without an API token, with a default database password or with demo data.
 * Data is labelled with its source and licence; nothing is fabricated when data is missing.
 * Backtest results are historical simulations, not expected returns.

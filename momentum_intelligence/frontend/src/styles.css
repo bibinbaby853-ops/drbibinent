@@ -114,3 +114,6 @@ td.wrap { white-space: normal; min-width: 12rem; }
 .alert-row:last-child { border-bottom: 0; }
 .alert-body { min-width: 0; overflow-wrap: anywhere; }
 .alert-row button { min-height: 32px; padding: .2rem .6rem; }
+
+.degraded { background: var(--notice-warn); color: var(--warn); border: 1px solid var(--warn);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; overflow-wrap: anywhere; }

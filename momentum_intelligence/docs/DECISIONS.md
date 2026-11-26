@@ -103,3 +103,22 @@ here, strategy variants are evaluated by forward paper trading in parallel
 paper accounts, with results reported as they accrue; backtests on the old
 history are diagnostics only. The platform is presented as a research and
 paper-trading tool with no demonstrated edge.
+
+## ADR-017 Production hardening (Accepted, Phase 11)
+A single-user deployment is protected by one random API token over HTTPS, with production start-up refusing
+weak configurations rather than warning about them. Login throttling counts distinct wrong tokens so that a
+stale token saved in a browser cannot lock the owner out. Exact dependency versions are locked and the test
+suite runs inside the built image, because a version change (pandas 3.1) broke Excel detection in testing.
+Backups are proved by restoring into a separate database and comparing per-table content fingerprints, not by
+the restore tool's exit code.
+
+## ADR-018 Official NSE index closes for benchmarks (Proposed, awaiting owner decision)
+Found in Phase 11: Yahoo had not published the 25 Nov 2026 index bars, so scoring carried the 23 Nov values
+forward (Nifty 50 25,349.65; the official close was 25,819.25, +1.85%) while reporting full coverage. In
+2021-2026 this happened on 6 of 1,362 sessions, all special weekend sessions, plus the latest session now.
+NSE publishes official closes for every index in `ind_close_all_DDMMYYYY.csv` on archives.nseindia.com
+(reachable here). Proposal: use that file as the primary benchmark source, keep Yahoo as fallback for history
+gaps, mark any carried value in the regime's coverage, and recompute regime, relative strength and scores for
+sessions that used a carried value. Recomputing 25 Nov would change inputs to orders already queued for the
+forward-test accounts, so the owner decides whether to recompute that day or apply the change from the next
+session only.
