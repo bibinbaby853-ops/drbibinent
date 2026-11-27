@@ -1,0 +1,167 @@
+SEO CORRECTIONS — 24 November 2026
+==================================
+Medical text was not changed. Only titles, descriptions, links, metadata and
+structured data were changed.
+
+ALL PAGES
+- Page language set to en-IN (English, India).
+- Sitemap lastmod dates updated to 2026-11-24.
+
+EIGHT PROCEDURE PAGES
+- Titles shortened to 60 characters or fewer, each with the topic and "Pala".
+  The old titles were cut off in Google results.
+- Meta descriptions shortened to 155 characters or fewer. The tonsil page
+  description no longer says "less pain and faster recovery", which was an
+  outcome claim.
+- og:site_name and og:locale added.
+- The doctor's portrait is no longer used as the social sharing image. This
+  matches item H5 in READ-THIS-FIRST, which the procedure pages had missed.
+  The card type is now "summary".
+- The MedicalProcedure structured data now links to the main Physician
+  record (@id https://drbibinent.com/#physician), so Google treats them as
+  the same doctor.
+
+HOMEPAGE
+- Title: "ENT Specialist in Pala, Kottayam | Dr. Bibin Baby".
+- New meta description that mentions Pala and Erattupetta.
+- H1: "Ear, Nose, Throat and Balance Care in Pala".
+- Business name changed from "Dr. Bibin ENT Clinic" to
+  "Dr. Bibin Baby – ENT Consultation" in the footer and og:site_name, so it
+  matches the Google Business Profile exactly.
+- Every Call and WhatsApp button now has its real tel: or wa.me link in the
+  HTML. Before, the links were filled in by JavaScript. The buttons now work
+  even without JavaScript, and Google can read them.
+- The "Questionnaires" links now point to #questionnaires instead of "#".
+  The pop-up overlay still opens as before.
+- Structured data:
+  - The Pala location is now a MedicalClinic named as on the Google Business
+    Profile.
+  - hasMap links to Google Maps were added for Pala and Erattupetta.
+  - sameAs links (Instagram, LinkedIn) were added.
+  - areaServed was added.
+  - A WebSite record was added.
+
+STILL TO DO BEFORE UPLOAD (cannot be done without you)
+1. DONE 24 Nov: registration filled in everywhere (34 places, including
+   structured data): 66908, Kerala State Medical Council (KSMC).
+2. Add consultation days and hours for Pala and Erattupetta, the same as on
+   the Google Business Profile.
+
+OUTCOME WORDING TONED DOWN (24 Nov, at your request)
+- vertigo-balance hero: "can often be corrected in a single visit" ->
+  "is treated in the clinic with repositioning manoeuvres; how quickly it
+  settles varies between patients."
+- vertigo-balance treatment list: "highly effective and often immediate" ->
+  "the standard treatment recommended in clinical guidelines; some patients
+  need more than one session"
+- homepage FAQ: "no external cuts and faster recovery" -> "usually done
+  endoscopically through the nostrils, without cuts on the face. Recovery
+  varies between patients."
+- vertigo-balance FAQ (page and structured data): "often resolving within
+  one or two visits" -> "How quickly it settles varies between patients, and
+  some need more than one session."
+- vertigo-balance BPPV card: "frequently resolving in one or two visits" ->
+  "how quickly it settles varies between patients."
+- vertigo-balance Malayalam box: "പലപ്പോഴും ഒന്നോ രണ്ടോ സന്ദർശനത്തിൽ ഭേദമാകും"
+  -> "എത്ര വേഗം ഭേദമാകുമെന്നത് ഓരോ രോഗിയിലും വ്യത്യസ്തമാണ്."
+  (please have a native speaker check the Malayalam)
+
+KERALA-WIDE TARGETING (24 Nov)
+- All titles and descriptions now name Kerala, not only Pala. Examples:
+  "ENT Surgeon & Vertigo Care in Kerala | Dr. Bibin Baby",
+  "Vertigo & Dizziness Treatment in Kerala | Dr. Bibin Baby".
+- Homepage H1: "Ear, Nose, Throat and Balance Care in Pala, Kerala".
+- Structured data: areaServed changed to Kerala (State) and India (Country).
+- New block under Locations: "Travelling from elsewhere in Kerala or from
+  abroad". It covers calling ahead, bringing reports (including reports from
+  abroad) and sharing travel dates. There is no online-consultation claim.
+- "Vertigo specialist" is not used, because it is not a recognised
+  qualification. The wording is "vertigo care" or "vertigo treatment" instead.
+
+SURGERY + VERTIGO (ALLIED SPECIALITY) EMPHASIS (24 Nov)
+- Homepage H1: "ENT Surgery and Vertigo Care in Pala, Kerala".
+- Hero text now opens with the surgical work (endoscopic sinus and nasal
+  surgery, ear surgery, tonsil and adenoid surgery) and names vertigo and
+  balance care as an allied speciality.
+- Section order: About -> ENT Surgery -> Vertigo and Balance Care -> then
+  the rest. Surgery and vertigo were 5th and 6th before; they are now 2nd and
+  3rd. The menu follows the same order.
+- Labels: "Surgical Expertise" is now "ENT Surgery". "Subspecialty Focus" is
+  now "Allied Speciality · Vestibular Medicine", on the homepage and on the
+  vertigo page.
+- Each surgery card now links to its detailed guide page. The vertigo section
+  links to /vertigo-balance/.
+- Structured data:
+  - Physician: knowsAbout added (surgeries and vestibular medicine).
+  - hasCredential added (degrees and the AVISA programme).
+  - The clinic lists availableService (the 4 surgical procedures plus the
+    vertigo assessment).
+- New homepage meta description that leads with surgery and vertigo.
+- BUG FIX: the highlighted words in the homepage heading were invisible
+  (their colour style was empty). This also affects the live site today.
+  They now show in gold.
+- Words like "expert", "skilled", "best" or "advanced" are not used, because
+  NMC rules do not allow them. Emphasis comes from position, headings, links
+  and structured data.
+
+PLACE DE-EMPHASISED (24 Nov, at your request)
+- Page titles, the homepage H1 and the meta descriptions no longer name
+  Pala, Kottayam or Kerala. They lead with the condition or procedure and
+  "Dr. Bibin Baby, ENT Surgeon". Example: "Vertigo & Dizziness Treatment |
+  Dr. Bibin Baby, ENT Surgeon".
+- Homepage H1: "ENT Surgery and Vertigo Care".
+- The address is still in the Locations section, the footer and the
+  structured data. Google Maps and the Google Business Profile still need it.
+
+FINAL TARGETING: ALL OF KERALA (24 Nov, replaces the two notes above)
+Aim: leads from anywhere in Kerala, without stressing Pala.
+- Every page title and meta description names Kerala. None names Pala,
+  Kottayam or Erattupetta. Examples:
+  "ENT Surgery & Vertigo Care in Kerala | Dr. Bibin Baby"
+  "Vertigo & Dizziness Treatment in Kerala | Dr. Bibin Baby"
+  Descriptions end with "for patients across Kerala".
+- Homepage H1: "ENT Surgery and Vertigo Care in Kerala".
+- The hero text ends with "Patients from anywhere in Kerala can book a
+  consultation."
+- Travelling block: the heading is now "Coming from another district of Kerala
+  or from abroad?". It now says such patients "are welcome". The earlier
+  wording claimed that patients already come from other districts, which had
+  not been confirmed.
+- Pala and Erattupetta appear only where patients need them: the Locations
+  section, the footer and the structured data (address, map links).
+
+FINAL (24 Nov): NO PLACE STRESSED ON THE WEBSITE; KERALA-WIDE TARGETING KEPT
+- Page titles, meta descriptions and the homepage H1 name no place. They
+  lead with the treatment and "Dr. Bibin Baby, ENT Surgeon".
+  Homepage title: "Dr. Bibin Baby | ENT Surgeon, Vertigo & Balance Care".
+  Homepage H1: "ENT Surgery and Vertigo Care".
+- Hero: the sentence "Patients from anywhere in Kerala can book a
+  consultation." has been removed.
+- Travel block, now place-neutral:
+  - Heading: "Travelling for your consultation?"
+  - Text: "Patients travelling from other districts, or from abroad while home
+    on leave, are welcome."
+- Place names remain only where patients need them:
+  - the Locations addresses and maps
+  - the booking note
+  - the footer
+  - the medical college name
+  - the KSMC registration
+- Kerala targeting is kept out of sight. The structured data (which Google
+  reads but visitors do not see) still sets areaServed to Kerala and India,
+  and the clinic addresses are in Kerala.
+
+NO "CLINIC" WORDING; NO SEPARATE VERTIGO BOOKING (24 Nov, published)
+- The consultation is not registered as a clinic, so the word "clinic" has
+  been removed everywhere. "Clinical" (a medical adjective) stays.
+  - Buttons: "Call the clinic" / "Call clinic" are now "Call for appointment".
+    "WhatsApp the Clinic" is now "WhatsApp for appointment".
+  - "in the clinic" is now "during the consultation" or "at a review visit".
+  - "Clinic Locations" is now "Where to Consult".
+  - The policy pages refer to "the doctor".
+  - Structured data: the Pala location is a Place named
+    "Dr. Bibin Baby – ENT Consultation, Pala", not a MedicalClinic. Sunrise
+    is marked as a Hospital.
+- The separate "Book a Vertigo Consultation" button has been removed.
+- The same "clinic" wording was removed from the 6 scheduled Google posts in
+  Metricool that contained it.
