@@ -1,0 +1,49 @@
+name: Site audit
+
+on:
+  push:
+    paths: ["site/**", "presence/**", "tools/**", ".github/workflows/site-audit.yml"]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"   # Mondays 08:47 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v5
+        with: { node-version: "22" }
+      - name: Build the Worker and smoke-test every route
+        run: |
+          python3 tools/build_worker.py
+          node tools/check_worker.mjs dist/worker.mjs
+      - name: Audit pages, contact details and links
+        run: |
+          set +e
+          python3 tools/audit.py --external --live --report audit-report.md
+          status=$?
+          cat audit-report.md >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+      - name: Traffic by platform (needs CLOUDFLARE_API_TOKEN secret)
+        if: always() && github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "No CLOUDFLARE_API_TOKEN secret; skipping."; exit 0; fi
+          python3 tools/traffic_report.py --days 30 --report traffic-report.md
+          cat traffic-report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: presence-reports
+          path: |
+            audit-report.md
+            traffic-report.md
+          if-no-files-found: ignore
