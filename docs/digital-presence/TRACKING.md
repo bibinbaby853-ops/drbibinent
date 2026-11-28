@@ -4,7 +4,7 @@
 
 | Layer | Status | Notes |
 |---|---|---|
-| Cloudflare Web Analytics | **Ready to deploy.** The beacon is added to every page at build time, so it no longer relies on sampled auto-injection. | Cookieless and needs no consent banner. Gives page views, referrers, landing pages, devices and countries. The privacy page has been updated to say so. |
+| Cloudflare Web Analytics | **Live.** Cloudflare adds the beacon to every page served to a browser, and the build adds none of its own: a second copy would count each visit twice. Data are sampled on the free plan. | Cookieless and needs no consent banner. Gives page views, referrers, landing pages, devices and countries. The privacy page has been updated to say so. |
 | Traffic-by-platform report | **Working.** `python3 tools/traffic_report.py --days 30` | Groups referrers into Google search, Google Maps/Business Profile, Instagram, Facebook, YouTube, WhatsApp, LinkedIn, other and direct. Baseline: `traffic-baseline-2026-11-28.md`. |
 | UTM-tagged links | **Generated.** `docs/digital-presence/LINKS.md` | They take effect once pasted into each platform. Cloudflare does not read UTM tags; GA4 does. |
 | GA4 | **Prepared, off.** Set `tracking.ga4_measurement_id` in `presence/profile.json`. | The build then adds gtag plus events: `whatsapp_click`, `phone_click`, `directions_click`, `social_click`, `appointment_request` (WhatsApp form). |

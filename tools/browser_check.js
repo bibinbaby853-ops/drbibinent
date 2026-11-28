@@ -13,7 +13,8 @@ const profiles = { desktop: { viewport: { width: 1366, height: 900 } }, mobile: 
   for (const [name, opts] of Object.entries(profiles)) {
     const ctx = await browser.newContext(opts);
     // External hosts are unreachable from the test box; block them so pages settle.
-    await ctx.route(/^https?:\/\/(?!localhost)/, (r) => r.abort());
+    const host = new URL(base).host;
+    await ctx.route((u) => u.host !== host, (r) => r.abort());
     for (const path of pages) {
       const page = await ctx.newPage();
       const errs = [];
@@ -33,7 +34,9 @@ const profiles = { desktop: { viewport: { width: 1366, height: 900 } }, mobile: 
         };
       });
       const legal = ["/privacy/", "/terms/", "/disclaimer/"].includes(path);
-      const need = legal ? ["insta", "fb", "li", "beacon", "ogimg"] : ["tel", "wa", "insta", "fb", "li", "maps", "beacon", "ogimg"];
+      // Cloudflare adds the analytics beacon at its edge, so expect it only on the live site.
+      const beacon = /localhost|127\.0\.0\.1/.test(base) ? [] : ["beacon"];
+      const need = (legal ? ["insta", "fb", "li", "ogimg"] : ["tel", "wa", "insta", "fb", "li", "maps", "ogimg"]).concat(beacon);
       const missing = need.filter((k) => !r[k]);
       const ok = resp.status() === 200 && r.overflow <= 1 && !missing.length && !errs.length;
       if (!ok) fail++;

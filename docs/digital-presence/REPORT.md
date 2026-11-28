@@ -1,6 +1,6 @@
 # Stage 6 – Final report (28 November 2026)
 
-**Status: the changes are built and tested locally but not deployed.** drbibinent.com still serves the version deployed on 24 November. Deploying needs the practice's approval (see "Pending actions").
+**Status: deployed on 28 November 2026 at 13:53 UTC** to Cloudflare Worker `red-wave-f642`, with the practice's approval. All 12 live pages were checked against the build and in desktop and mobile browsers after deployment. The previous version (`0e10c584`, 24 Nov) can be restored from Cloudflare > Workers & Pages > red-wave-f642 > Deployments.
 
 ## 1. Connected platforms
 
@@ -23,15 +23,15 @@
 - The repository's `sitemap.xml` listed `/about`, `/vertigo`, `/sinus`, `/blog` and `/contact`, which are all 404 on the live site. The repository now holds the live site and its correct sitemap; the old files are in `archive/`.
 - No broken internal links or anchors were found. All 8 questionnaire deep links (`/#q/…`) were checked against the questionnaire app.
 
-## 3. Integrations completed (in source, tested, awaiting deployment)
+## 3. Integrations completed (deployed and tested)
 - Live site source brought under version control, with a reproducible Worker build. A rebuild of the unchanged source served byte-identical responses for all 17 files.
 - Social links (Instagram, Facebook, LinkedIn) added to the footer of all 8 service pages and 3 legal pages.
-- Cloudflare Web Analytics beacon built into every page (cookieless), replacing partial auto-injection.
+- Cloudflare Web Analytics (cookieless) confirmed on every page: Cloudflare adds exactly one beacon per browser page view. The first deployment briefly added a second copy from the build; this was removed within a minute so that visits are not counted twice.
 - GA4 support with patient-contact events (`whatsapp_click`, `phone_click`, `directions_click`, `social_click`, `appointment_request`), switched off until a measurement ID is provided.
 - Search Console meta-tag support, switched off (DNS verification recommended).
 - UTM-tagged links for every platform placement (LINKS.md). The redirect was checked to keep the tags.
 - Traffic-by-platform report from Cloudflare, with a 90-day baseline.
-- Weekly automated audit on GitHub: build, route check, SEO and contact-detail checks, and an external link check from GitHub's network.
+- Weekly automated audit on GitHub: build, route check, SEO and contact-detail checks, and an external link check from GitHub's network. Its first runs confirmed both Maps links, both embedded maps, Instagram and the Manorama article load; Facebook and LinkedIn refuse automated checks and need a manual look.
 
 ## 4. SEO improvements
 - `og:image` (with size and alt text) and `twitter:image` on all 12 pages. Shared links on WhatsApp and Facebook now show the doctor's photo.
@@ -44,10 +44,11 @@
 - `tools/audit.py`: 0 errors on 12 pages (29 before; 21 of those were real Open Graph gaps, the other 8 were valid questionnaire links the audit now recognises). It was also checked to catch a deliberately wrong phone number.
 - `tools/check_worker.mjs`: all 17 files return 200. Checked: directory redirect, `index.html` redirect keeping the query string, 404, 405 and 304.
 - `tools/browser_check.js`: 12 pages × desktop and mobile Chromium, with no JavaScript errors, no sideways scrolling, and call, WhatsApp, map, Instagram, Facebook, LinkedIn, analytics beacon and og:image all present. The appointment form opens WhatsApp with the patient's details, and `/#q/dhi` opens the questionnaire.
-- **Not verified:** whether the external profiles and map links open the right page. Every one of those hosts is blocked from this environment. The GitHub workflow checks them on its first run; review its summary.
+- After deployment: `tools/audit.py --live` shows all 12 live pages identical to the build (apart from Cloudflare's analytics script), and `tools/browser_check.js https://drbibinent.com` passes every page on desktop and mobile, plus the appointment form and the questionnaire link.
+- **Not verified:** that the Facebook and LinkedIn links open the official profiles (both sites block automated checks).
 
 ## 6. Pending actions requiring manual authorization
-1. **Approve deployment** of the built site to Cloudflare Worker `red-wave-f642` (README > Deploying). Review the privacy-page wording first: a "Visitor statistics" row was added, and the fonts sentence was corrected because it was inaccurate.
+1. ~~Approve deployment~~: done 28 Nov 2026. Open the Facebook and LinkedIn links on the site once to confirm they are the official profiles.
 2. **Confirm** the display name, consultation hours, Google Business Profile and review link, YouTube channel, any booking platform and directory listings (AUDIT.md, "Information needing confirmation").
 3. **Platform updates** in PLATFORM_PLAYBOOK.md: Google Business Profile first, then Instagram, Facebook, WhatsApp Business, YouTube and LinkedIn.
 4. **Search Console:** verify the domain via a DNS TXT record and submit the sitemap.

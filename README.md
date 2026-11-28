@@ -41,6 +41,6 @@ To roll back, use Cloudflare dashboard > Workers & Pages > red-wave-f642 > Deplo
 
 ## Rules
 
-- Never put passwords, API keys or tokens in this repository. The Cloudflare Web Analytics beacon token in `profile.json` is public by design.
+- Never put passwords, API keys or tokens in this repository.
 - Do not publish patient information, images or testimonials without written consent, and keep content within the NMC professional conduct regulations on advertising.
 - Change business details in `presence/profile.json` first, then on the pages. The audit flags any page that disagrees with it.

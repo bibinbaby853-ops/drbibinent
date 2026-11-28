@@ -291,6 +291,8 @@ def main():
                 continue
             src = (SITE / (path.lstrip("/") + ("index.html" if path.endswith("/") else ""))).read_text(encoding="utf-8")
             built = build_worker.inject(src, *build_worker.tracking_snippets(PROFILE.get("tracking", {}))).encode("utf-8")
+            # Cloudflare injects its Web Analytics beacon into pages served to browsers.
+            body = re.sub(rb'<script[^>]*static\.cloudflareinsights\.com/beacon[^>]*></script>\n?', b"", body)
             if hashlib.md5(body).digest() != hashlib.md5(built).digest():
                 info.append("live %s differs from the current build of site/ (changes not yet deployed)" % path)
             else:

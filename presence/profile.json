@@ -67,8 +67,8 @@
     "note": "List any Practo, Justdial, Lybrate, Sunrise Hospital doctor-profile or other directory listings so that their details can be checked for consistency."
   },
   "tracking": {
-    "cloudflare_web_analytics_token": "b98a6f237964447d9057a5c3e5a19ef3",
-    "_cloudflare_note": "Public beacon token of the existing Cloudflare Web Analytics site for drbibinent.com (cookieless; no consent banner needed). It is meant to appear in page HTML and is not a secret.",
+    "cloudflare_web_analytics_token": null,
+    "_cloudflare_note": "Leave null. Cloudflare Web Analytics (site token b98a6f237964447d9057a5c3e5a19ef3, cookieless) is injected automatically by Cloudflare into pages served to browsers. Setting the token here as well would add a second beacon and count every visit twice. Set it only if automatic injection is switched off in Cloudflare.",
     "ga4_measurement_id": null,
     "_ga4_note": "Set to the G-XXXXXXXXXX ID once a GA4 property exists. GA4 sets cookies: add a consent notice and update /privacy/ before enabling.",
     "google_site_verification": null,

@@ -19,7 +19,7 @@
 | Appointment platform | None besides WhatsApp and phone. No Practo or similar link known. |
 | Open Graph image | An image (`/images/dr-bibin-og.jpg`) was deployed but **no page referenced it**, so links shared on WhatsApp and Facebook showed no picture. |
 | Legal pages | Privacy, terms and disclaimer had **no Open Graph tags**. |
-| Analytics | Cloudflare Web Analytics site exists (since 1 Aug 2026) with automatic injection on a sampled ("lite") basis. **The beacon is not in the page HTML**, so coverage is partial. No GA4, Search Console verification tag or Meta Pixel. |
+| Analytics | Cloudflare Web Analytics has run since 1 Aug 2026. Cloudflare adds its beacon to every page served to a browser; on the free plan the data are sampled (about 1 visit in 10 recorded). No GA4, Search Console verification tag or Meta Pixel. |
 | Privacy page accuracy | It says fonts are embedded in the pages. **In fact the home page and all 8 service pages load Google Fonts.** It does not mention visitor statistics. |
 | Audit result before changes | 29 errors found by `tools/audit.py`: 21 missing Open Graph tags; the other 8 turned out to be valid questionnaire deep links that the audit then learned to recognise. |
 
