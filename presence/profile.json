@@ -1,0 +1,77 @@
+{
+  "_comment": "Single source of truth for the practice's public identity, links and tracking IDs. tools/audit.py checks every page against this file; tools/build_worker.py reads the tracking block. Values marked \"status\": \"needs_confirmation\" must be confirmed by Dr. Bibin Baby before use. Never put passwords or API secrets here: this file is public.",
+  "identity": {
+    "person_name": "Dr. Bibin Baby",
+    "site_name": "Dr. Bibin Baby – ENT Consultation",
+    "proposed_platform_display_name": {
+      "value": "Dr. Bibin Baby ENT",
+      "status": "needs_confirmation",
+      "note": "The brief uses 'Dr. Bibin Baby ENT'; the website uses 'Dr. Bibin Baby – ENT Consultation'. Pick one display name for Google Business Profile, Facebook, Instagram, YouTube and WhatsApp and use it everywhere."
+    },
+    "job_title": "Consultant ENT Surgeon",
+    "qualifications": "MBBS, MS (ENT), DNB (ENT)",
+    "registration": "Registration number 66908, Kerala State Medical Council (KSMC)",
+    "languages": ["Malayalam", "English", "Hindi"],
+    "specialities": ["ENT surgery", "Rhinology", "Otology", "Laryngology", "Vertigo and balance care (vestibular medicine)", "Pediatric ENT"]
+  },
+  "phone": {
+    "e164": "+919645564883",
+    "display": "+91 96455 64883",
+    "whatsapp_number": "919645564883"
+  },
+  "locations": [
+    {
+      "id": "pala",
+      "name": "Dr. Bibin Baby – ENT Consultation, Pala",
+      "street": "Opposite Lalam Church Road",
+      "locality": "Pala",
+      "region": "Kerala",
+      "postal_code": "686575",
+      "country": "IN",
+      "maps_url": "https://maps.app.goo.gl/xQgMM4eWyyvT7hyx7",
+      "google_business_profile_url": {"value": null, "status": "needs_confirmation"},
+      "google_review_url": {"value": null, "status": "needs_confirmation", "note": "Google Business Profile > Ask for reviews > copy the link (looks like https://g.page/r/.../review)."},
+      "opening_hours": {"value": null, "status": "needs_confirmation"}
+    },
+    {
+      "id": "erattupetta",
+      "name": "Sunrise Hospital, Erattupetta",
+      "street": "Pala–Erattupetta Road, Kaduvamuzhi",
+      "locality": "Erattupetta",
+      "region": "Kerala",
+      "postal_code": "686121",
+      "country": "IN",
+      "maps_url": "https://maps.app.goo.gl/RG1hwVPUYW3QNCjC9",
+      "google_business_profile_url": {"value": null, "status": "needs_confirmation", "note": "Hospital-owned listing; the doctor may instead have a practitioner listing at this address."},
+      "opening_hours": {"value": null, "status": "needs_confirmation"}
+    }
+  ],
+  "website": {
+    "canonical_origin": "https://drbibinent.com",
+    "og_image": "https://drbibinent.com/images/dr-bibin-og.jpg"
+  },
+  "social": {
+    "instagram": {"url": "https://www.instagram.com/dr.bibin/", "status": "in_use_on_site_unverified"},
+    "facebook": {"url": "https://www.facebook.com/drbibinent", "status": "in_use_on_site_unverified"},
+    "linkedin": {"url": "https://www.linkedin.com/in/bibin-baby-75a553154", "status": "in_use_on_site_unverified"},
+    "youtube": {"url": null, "status": "needs_confirmation", "note": "No YouTube channel is linked anywhere on the site. Supply the channel URL (preferably the @handle form) if one exists."},
+    "whatsapp": {"url": "https://wa.me/919645564883", "status": "in_use_on_site_unverified"}
+  },
+  "appointment_booking": {
+    "method": "WhatsApp request form on the home page (#appointment); phone call",
+    "external_platform_url": {"value": null, "status": "needs_confirmation", "note": "If Practo, Eka Care, a hospital booking page or similar is used, supply the link."}
+  },
+  "healthcare_directories": {
+    "value": [],
+    "status": "needs_confirmation",
+    "note": "List any Practo, Justdial, Lybrate, Sunrise Hospital doctor-profile or other directory listings so that their details can be checked for consistency."
+  },
+  "tracking": {
+    "cloudflare_web_analytics_token": "b98a6f237964447d9057a5c3e5a19ef3",
+    "_cloudflare_note": "Public beacon token of the existing Cloudflare Web Analytics site for drbibinent.com (cookieless; no consent banner needed). It is meant to appear in page HTML and is not a secret.",
+    "ga4_measurement_id": null,
+    "_ga4_note": "Set to the G-XXXXXXXXXX ID once a GA4 property exists. GA4 sets cookies: add a consent notice and update /privacy/ before enabling.",
+    "google_site_verification": null,
+    "_gsc_note": "Prefer verifying Search Console with a DNS TXT record (Domain property). Use this meta-tag value only if DNS verification is not possible."
+  }
+}
