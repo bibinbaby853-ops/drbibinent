@@ -82,7 +82,8 @@ def main():
         "",
         "## Contact details to use everywhere (NAP)",
         "",
-        "- Name: %s (display name across platforms: **to be confirmed**, see AUDIT.md)" % P["identity"]["person_name"],
+        "- Name on every platform: **%s** (Instagram, 30-character limit: %s)" % (
+            P["identity"]["platform_display_name"]["value"], P["identity"]["platform_display_name"]["short_form_max_30_chars"]),
         "- Phone / WhatsApp: %s" % P["phone"]["display"],
     ]
     for loc in P["locations"]:

@@ -49,7 +49,7 @@
 
 ## 6. Pending actions requiring manual authorization
 1. ~~Approve deployment~~: done 28 Nov 2026. Open the Facebook and LinkedIn links on the site once to confirm they are the official profiles.
-2. **Confirm** the display name, consultation hours, Google Business Profile and review link, YouTube channel, any booking platform and directory listings (AUDIT.md, "Information needing confirmation").
+2. **Confirm** (display name done: "Dr. Bibin Baby – ENT Consultation") consultation hours, Google Business Profile and review link, YouTube channel, any booking platform and directory listings (AUDIT.md, "Information needing confirmation").
 3. **Platform updates** in PLATFORM_PLAYBOOK.md: Google Business Profile first, then Instagram, Facebook, WhatsApp Business, YouTube and LinkedIn.
 4. **Search Console:** verify the domain via a DNS TXT record and submit the sitemap.
 5. **GA4 (optional):** create the property, add a consent notice, then set the ID.

@@ -28,7 +28,7 @@ Google search 38% of page loads, Facebook 3%, direct/unknown 48% (this includes 
 
 ## Inconsistencies to resolve
 
-1. **Display name.** The brief uses "Dr. Bibin Baby ENT". The website uses "Dr. Bibin Baby – ENT Consultation" (site name) and "Dr. Bibin Baby" (person). Choose one name for Google Business Profile, Facebook, Instagram, YouTube and WhatsApp. Suggestion: keep **"Dr. Bibin Baby – ENT Consultation"** for the Pala Business Profile so it matches the website and structured data.
+1. **Display name: resolved 28 Nov 2026.** Confirmed as **"Dr. Bibin Baby – ENT Consultation"**, the form the website and its structured data already use. Use it unchanged on Google Business Profile, Facebook, YouTube and WhatsApp Business. On Instagram, whose name field allows 30 characters, use "Dr Bibin Baby ENT Consultation".
 2. **Qualification wording.** The service-page footers say "MBBS, MS (ENT), DNB". The privacy page and structured data say "MBBS, MS (ENT), DNB (ENT)". This is minor; use "DNB (ENT)" everywhere on external profiles.
 3. **Instagram URL form.** The site used both `instagram.com/dr.bibin` and `instagram.com/dr.bibin/`. Now standardised on the trailing-slash form.
 

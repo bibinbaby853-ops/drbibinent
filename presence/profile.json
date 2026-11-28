@@ -3,10 +3,12 @@
   "identity": {
     "person_name": "Dr. Bibin Baby",
     "site_name": "Dr. Bibin Baby – ENT Consultation",
-    "proposed_platform_display_name": {
-      "value": "Dr. Bibin Baby ENT",
-      "status": "needs_confirmation",
-      "note": "The brief uses 'Dr. Bibin Baby ENT'; the website uses 'Dr. Bibin Baby – ENT Consultation'. Pick one display name for Google Business Profile, Facebook, Instagram, YouTube and WhatsApp and use it everywhere."
+    "platform_display_name": {
+      "value": "Dr. Bibin Baby – ENT Consultation",
+      "status": "confirmed",
+      "confirmed_on": "2026-11-28",
+      "note": "Use exactly this on Google Business Profile, Facebook, YouTube and WhatsApp Business. Instagram's name field allows 30 characters, so use the short form there.",
+      "short_form_max_30_chars": "Dr Bibin Baby ENT Consultation"
     },
     "job_title": "Consultant ENT Surgeon",
     "qualifications": "MBBS, MS (ENT), DNB (ENT)",

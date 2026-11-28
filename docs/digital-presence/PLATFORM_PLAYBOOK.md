@@ -9,7 +9,7 @@ The profile text below uses only facts already published on drbibinent.com. Unde
 ## 1. Google Business Profile (highest impact: 38% of visits already come from Google)
 
 1. Open business.google.com and check whether a profile already exists for the Pala consultation. Search Maps for "Dr. Bibin Baby" and "ENT Pala". If two exist, **request removal of the duplicate** instead of keeping both.
-2. Name: exactly as chosen in AUDIT.md item 1 (suggested **Dr. Bibin Baby – ENT Consultation**). Do not add keywords to the name: Google suspends profiles for that.
+2. Name: **Dr. Bibin Baby – ENT Consultation** (confirmed), typed exactly like this. Do not add keywords to the name: Google suspends profiles for that.
 3. Primary category: **Otolaryngologist**. Additional category: *ENT clinic* only if the Pala address is a clinic that patients visit.
 4. Address and pin: Opposite Lalam Church Road, Pala, Kerala 686575. Check the pin is on the right building.
 5. Phone: +91 96455 64883.
@@ -27,7 +27,7 @@ The profile text below uses only facts already published on drbibinent.com. Unde
 ## 2. Instagram (@dr.bibin)
 
 - Switch to a **Professional > Business** account (category: *Doctor*) if it is not one already. Contact buttons need this.
-- Name field: *Dr. Bibin Baby | ENT Surgeon*. The name field is searchable, so it can carry "ENT Surgeon".
+- Name field: **Dr Bibin Baby ENT Consultation**. This is the confirmed name shortened to Instagram's 30-character limit; the name field is searchable, so "ENT" helps people find the account.
 - Bio (142 of 150 characters):
   ```
   Consultant ENT Surgeon · MBBS, MS, DNB (ENT)
@@ -42,6 +42,7 @@ The profile text below uses only facts already published on drbibinent.com. Unde
 
 ## 3. Facebook (/drbibinent)
 
+- Page name: **Dr. Bibin Baby – ENT Consultation**. A Page name change goes to Meta for review and may take a few days.
 - Page category: *Doctor* or *Medical & Health*. Intro (≤101): *Consultant ENT surgeon in Pala and at Sunrise Hospital, Erattupetta. Ear, nose, throat and vertigo care.* (104 characters; drop the final "and vertigo care" wording if Facebook rejects it.)
 - Website: the `page_website` link. Phone, address and hours: the same as Google.
 - Action button: **WhatsApp** (connect the WhatsApp Business number) or **Book now** pointing to the `page_book_button` link. Facebook allows one button, so choose WhatsApp if most enquiries come in by chat.
@@ -49,7 +50,7 @@ The profile text below uses only facts already published on drbibinent.com. Unde
 
 ## 4. YouTube (channel to be confirmed)
 
-- If there is no channel, create one under the same Google account as the Business Profile, using the same name and photo.
+- Channel name: **Dr. Bibin Baby – ENT Consultation**. If there is no channel, create one under the same Google account as the Business Profile, using this name and the same photo.
 - Description: the Google description above, plus "Appointments: +91 96455 64883 (call or WhatsApp)".
 - Links: website (`channel_links` link), Instagram, Facebook. Use the `video_description` link in each video description.
 - Send the channel URL to the developer. A YouTube icon will then be added to the website header and footer, and the channel to the structured data.
@@ -57,6 +58,7 @@ The profile text below uses only facts already published on drbibinent.com. Unde
 ## 5. WhatsApp Business (+91 96455 64883)
 
 - Use the **WhatsApp Business** app (not personal WhatsApp) on this number.
+- Business name: **Dr. Bibin Baby – ENT Consultation**.
 - Business profile: category *Doctor*; description (≤512): the first two sentences of the Google description; address: Pala; hours: as confirmed; website 1: the `business_profile` link; website 2: the Instagram profile.
 - Greeting message, suggested: *Thank you for contacting Dr. Bibin Baby's ENT consultation. Please share the patient's name, age and the main concern, and your preferred location (Pala or Sunrise Hospital, Erattupetta). For emergencies, please go to the nearest emergency department or call 108.*
 - Away message: the same message plus the `auto_reply` link, which shows the locations and directions.

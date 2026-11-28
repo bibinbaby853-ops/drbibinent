@@ -42,7 +42,7 @@ Each link carries UTM tags so visits can be attributed once GA4 is on. The query
 
 ## Contact details to use everywhere (NAP)
 
-- Name: Dr. Bibin Baby (display name across platforms: **to be confirmed**, see AUDIT.md)
+- Name on every platform: **Dr. Bibin Baby – ENT Consultation** (Instagram, 30-character limit: Dr Bibin Baby ENT Consultation)
 - Phone / WhatsApp: +91 96455 64883
 - Dr. Bibin Baby – ENT Consultation, Pala: Opposite Lalam Church Road, Pala, Kerala 686575
 - Sunrise Hospital, Erattupetta: Pala–Erattupetta Road, Kaduvamuzhi, Erattupetta, Kerala 686121
