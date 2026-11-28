@@ -15,11 +15,11 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: "3.12" }
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
+      - uses: actions/setup-node@v5
+        with: { node-version: "22" }
       - name: Build the Worker and smoke-test every route
         run: |
           python3 tools/build_worker.py
@@ -39,7 +39,7 @@ jobs:
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "No CLOUDFLARE_API_TOKEN secret; skipping."; exit 0; fi
           python3 tools/traffic_report.py --days 30 --report traffic-report.md
           cat traffic-report.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: presence-reports

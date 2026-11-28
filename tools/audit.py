@@ -99,15 +99,25 @@ def walk_ld(node, out):
             walk_ld(v, out)
 
 
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/124.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+    "Accept-Language": "en-IN,en;q=0.9",
+}
+
+
 def check_url(url, timeout=20):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (site link checker)"})
+    req = urllib.request.Request(url, headers=BROWSER_HEADERS)
+    # Many sites (Google Maps embeds among them) answer HEAD differently from a
+    # real page load, so any HEAD failure is retried as a GET.
     for method in ("HEAD", "GET"):
         req.method = method
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.status, r.geturl()
         except urllib.error.HTTPError as e:
-            if method == "HEAD" and e.code in (403, 405, 429, 500, 501):
+            if method == "HEAD":
                 continue
             return e.code, url
         except Exception as e:  # DNS, TLS, timeout, proxy refusal
@@ -265,8 +275,17 @@ def main():
     if args.live:
         for path in sorted(pages):
             try:
-                with urllib.request.urlopen(ORIGIN + path, timeout=20) as r:
+                req = urllib.request.Request(ORIGIN + path, headers=BROWSER_HEADERS)
+                with urllib.request.urlopen(req, timeout=20) as r:
                     body = r.read()
+            except urllib.error.HTTPError as e:
+                if e.code in (403, 429, 503):
+                    # Cloudflare's bot protection refuses data-centre clients such as
+                    # GitHub's runners; that says nothing about what visitors get.
+                    warnings.append("live %s: could not compare, Cloudflare refused the automated request (%s)" % (path, e.code))
+                else:
+                    errors.append("live %s: HTTP %s" % (path, e.code))
+                continue
             except Exception as e:
                 errors.append("live %s: %s" % (path, e))
                 continue
