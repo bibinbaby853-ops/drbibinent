@@ -70,6 +70,9 @@ def main():
         out.append("| %s | %s | %s |" % (k.capitalize(), v["url"] or "**missing**", v["status"].replace("_", " ")))
     for loc in P["locations"]:
         out.append("| Google Maps – %s | %s | in use on site, unverified |" % (loc["locality"], loc["maps_url"]))
+        b = loc.get("google_business_profile_url")
+        if b is not None:
+            out.append("| Google Business Profile – %s | %s | %s |" % (loc["locality"], b["value"] or "**missing**", b["status"].replace("_", " ")))
         g = loc.get("google_review_url")
         if g is not None:
             out.append("| Google reviews – %s | %s | %s |" % (loc["locality"], g["value"] or "**missing**", g["status"].replace("_", " ")))

@@ -31,7 +31,7 @@
       "postal_code": "686575",
       "country": "IN",
       "maps_url": "https://maps.app.goo.gl/xQgMM4eWyyvT7hyx7",
-      "google_business_profile_url": {"value": null, "status": "needs_confirmation"},
+      "google_business_profile_url": {"value": "https://share.google/ZMZMXw2PNAukoLB8P", "status": "provided_unverified", "note": "Share link sent by the practice on 28 Nov 2026, assumed to be the Pala profile. Not yet opened: Google hosts are blocked from the build environment. Confirm the location before linking it from the website."},
       "google_review_url": {"value": null, "status": "needs_confirmation", "note": "Google Business Profile > Ask for reviews > copy the link (looks like https://g.page/r/.../review)."},
       "opening_hours": {"value": null, "status": "needs_confirmation"}
     },

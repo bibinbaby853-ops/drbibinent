@@ -32,8 +32,10 @@ Each link carries UTM tags so visits can be attributed once GA4 is on. The query
 | Linkedin | https://www.linkedin.com/in/bibin-baby-75a553154 | in use on site unverified |
 | Whatsapp | https://wa.me/919645564883 | in use on site unverified |
 | Google Maps – Pala | https://maps.app.goo.gl/xQgMM4eWyyvT7hyx7 | in use on site, unverified |
+| Google Business Profile – Pala | https://share.google/ZMZMXw2PNAukoLB8P | provided unverified |
 | Google reviews – Pala | **missing** | needs confirmation |
 | Google Maps – Erattupetta | https://maps.app.goo.gl/RG1hwVPUYW3QNCjC9 | in use on site, unverified |
+| Google Business Profile – Erattupetta | **missing** | needs confirmation |
 
 ## WhatsApp click-to-chat
 
